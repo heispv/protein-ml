@@ -18,7 +18,9 @@ def extract_features_pos(sample: Dict[str, Any]) -> PositiveProteinData:
 
     ps_length = next((feature['location']['end']['value'] 
                       for feature in sample["features"] 
-                      if feature['type'] == 'Signal' and feature['description'] != 'Not cleaved'),
+                      if feature['type'] == 'Signal' and
+                      feature['description'] != 'Not cleaved' and
+                      feature['location']['end']['value'] > 14),
                      None)
 
     fasta = f">{primary_accession}\n{sequence}\n"
