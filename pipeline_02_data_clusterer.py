@@ -5,47 +5,68 @@ import logging
 from utils import run_command
 from config import FETCHED_DIR, CLUSTER_DIR, MMSEQS_FILE_PREFIX, MMSEQS_IDENTITY, MMSEQS_COVERAGE
 
-# Constants
-PROTEINS_FILE = "pos_filtered_proteins.fasta"
+logger = logging.getLogger(__name__)
 
-# Construct MMseqs command as a list of arguments
-MMSEQS_COMMAND = [
-    "mmseqs", "easy-cluster",
-    os.path.join(FETCHED_DIR, PROTEINS_FILE),
-    MMSEQS_FILE_PREFIX,
-    "tmp",
-    "--min-seq-id", str(MMSEQS_IDENTITY),
-    "-c", str(MMSEQS_COVERAGE),
-    "--cov-mode", "0",
-    "--cluster-mode", "1"
-]
+def run_mmseqs(data_type: str) -> None:
+    """
+    Run MMseqs clustering on the specified data type.
 
-def mmseqs():
+    Args:
+        data_type (str): Either 'pos' or 'neg' for positive or negative data.
+
+    Raises:
+        ValueError: If data_type is neither 'pos' nor 'neg'.
+    """
+    if data_type not in {'pos', 'neg'}:
+        raise ValueError("data_type must be either 'pos' or 'neg'")
+
+    proteins_file = f"{data_type}_filtered_proteins.fasta"
+    output_dir = os.path.join(CLUSTER_DIR, "positive" if data_type == "pos" else "negative")
+    
+    mmseqs_command = [
+        "mmseqs", "easy-cluster",
+        os.path.join(FETCHED_DIR, proteins_file),
+        f"{MMSEQS_FILE_PREFIX}_{data_type}",
+        "tmp",
+        "--min-seq-id", str(MMSEQS_IDENTITY),
+        "-c", str(MMSEQS_COVERAGE),
+        "--cov-mode", "0",
+        "--cluster-mode", "1"
+    ]
+
     try:
-        # Run the MMseqs command
-        output = run_command(MMSEQS_COMMAND)
-        print("Command output:", output)
+        output = run_command(mmseqs_command)
+        logger.info("MMseqs command output: %s", output)
     except Exception as e:
-        print(f"Failed to execute MMseqs command: {e}")
-        logging.error(f"MMseqs command failed: {e}")
+        logger.error("Failed to execute MMseqs command: %s", e)
+        raise
 
-    # Remove the tmp directory
-    run_command(['rm', '-r', 'tmp'])
-    print("Temporary files removed.")
+    # Remove the temporary directory
+    try:
+        run_command(['rm', '-r', 'tmp'])
+        logger.info("Temporary files removed.")
+    except Exception as e:
+        logger.warning("Failed to remove temporary directory: %s", e)
 
-    # Create the CLUSTER_DIR directory
-    run_command(['mkdir', '-p', CLUSTER_DIR])
-    print(f"Directory {CLUSTER_DIR} created.")
+    # Create the output directory
+    try:
+        os.makedirs(output_dir, exist_ok=True)
+        logger.info("Directory %s created/confirmed.", output_dir)
+    except Exception as e:
+        logger.error("Failed to create directory %s: %s", output_dir, e)
+        raise
 
-    # Move the result files to CLUSTER_DIR
-    files_to_move = glob.glob(f'{MMSEQS_FILE_PREFIX}*')
+    # Move the result files
+    files_to_move = glob.glob(f'{MMSEQS_FILE_PREFIX}_{data_type}*')
 
     if files_to_move:
-        # Move the result files to CLUSTER_DIR
-        run_command(['mv'] + files_to_move + [CLUSTER_DIR])
-        print(f"Moved files to {CLUSTER_DIR}: {files_to_move}")
+        try:
+            run_command(['mv'] + files_to_move + [output_dir])
+            logger.info("Moved files to %s: %s", output_dir, files_to_move)
+        except Exception as e:
+            logger.error("Failed to move files to %s: %s", output_dir, e)
+            raise
     else:
-        logging.error(f"No files matching {MMSEQS_FILE_PREFIX}* were found.")
-        print(f"No files found to move.")
+        logger.warning("No files matching %s_%s* were found.", MMSEQS_FILE_PREFIX, data_type)
 
-    print("Data splitting completed.")
+    logger.info("Data splitting for %s completed.", data_type)
