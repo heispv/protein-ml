@@ -1,5 +1,5 @@
 from typing import Dict, Any
-from models import PositiveProteinData, NegativeProteinData
+from data_classes import PositiveProteinData, NegativeProteinData
 import logging
 import json
 import os
