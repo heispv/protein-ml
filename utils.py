@@ -1,12 +1,21 @@
 import os
 import logging
 from datetime import datetime
-from config import DATA_DIR, FETCHED_DIR, CLUSTER_DIR, LOG_FILE, POSITIVE_QUERY, NEGATIVE_QUERY, BATCH_SIZE
+from config import DATA_DIR, FETCHED_DIR, CLUSTER_DIR, LOG_FILE, POSITIVE_QUERY, NEGATIVE_QUERY, BATCH_SIZE, SPLIT_DIR
 import shlex
 import subprocess
 
 
 def setup_logging():
+    if not os.path.exists(DATA_DIR):
+        os.makedirs(DATA_DIR)
+    if not os.path.exists(FETCHED_DIR):
+        os.makedirs(FETCHED_DIR)
+    if not os.path.exists(CLUSTER_DIR):
+        os.makedirs(CLUSTER_DIR)
+    if not os.path.exists(SPLIT_DIR):
+        os.makedirs(SPLIT_DIR)
+        
     if not os.path.exists(DATA_DIR):
         os.makedirs(DATA_DIR)
         os.makedirs(FETCHED_DIR)
