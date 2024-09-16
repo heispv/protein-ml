@@ -364,8 +364,6 @@ If you have any questions or need further assistance, please feel free to contac
 - **Name:** Peyman Vahidi
 - **Email:** [peyman.vahidi@studio.unibo.it](mailto:peyman.vahidi@studio.unibo.it)
 
-*Replace `[peyman.vahidi@studio.unibo.it]` with your actual email address if you wish to include it.*
-
 ---
 
 **Acknowledgments:**
