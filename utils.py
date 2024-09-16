@@ -43,7 +43,7 @@ def run_command(command):
     
     try:
         # Run the command and capture output
-        result = subprocess.run(args, check=True, capture_output=True, text=True)
+        result = subprocess.run(args, check=True, capture_output=True, text=False)
         
         # Log the standard output
         logging.info("Command executed successfully.")
