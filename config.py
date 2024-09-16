@@ -15,3 +15,7 @@ CLUSTER_DIR = os.path.join(DATA_DIR, "clustered_data/")
 MMSEQS_IDENTITY = 0.3
 MMSEQS_COVERAGE = 0.4
 MMSEQS_FILE_PREFIX = f"cluster_results_i{int(100*MMSEQS_IDENTITY)}_c{int(100*MMSEQS_COVERAGE)}"
+
+SPLIT_DIR = os.path.join(DATA_DIR, "splited_data/")
+
+NUM_FOLDS = 5
