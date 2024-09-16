@@ -35,8 +35,7 @@ def run_mmseqs(data_type: str) -> None:
     ]
 
     try:
-        output = run_command(mmseqs_command)
-        logger.info("MMseqs command output: %s", output)
+        run_command(mmseqs_command)
     except Exception as e:
         logger.error("Failed to execute MMseqs command: %s", e)
         raise
