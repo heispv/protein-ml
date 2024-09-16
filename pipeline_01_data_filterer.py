@@ -50,9 +50,11 @@ def get_pos_dataset(search_url: str, output_base_name: str, session: requests.Se
     fasta_file_name = os.path.join(FETCHED_DIR, f"{output_base_name}.fasta")
 
     if os.path.exists(tsv_file_name) and os.path.exists(fasta_file_name):
-        message = f"Positive dataset files already exist: {tsv_file_name} and {fasta_file_name}.\nSkipping download..."
+        message = f"Positive dataset files already exist: {tsv_file_name} and {fasta_file_name}."
         logging.info(message)
+        logging.info("Skipping download...")
         print(message)
+        print("Skipping download...")
         return
 
     logging.info(f"Processing positive dataset. Output files: {tsv_file_name}, {fasta_file_name}")
@@ -70,9 +72,11 @@ def get_neg_dataset(search_url: str, output_base_name: str, session: requests.Se
     fasta_file_name = os.path.join(FETCHED_DIR, f"{output_base_name}.fasta")
 
     if os.path.exists(tsv_file_name) and os.path.exists(fasta_file_name):
-        message = f"Negative dataset files already exist: {tsv_file_name} and {fasta_file_name}.\nSkipping download..."
+        message = f"Negative dataset files already exist: {tsv_file_name} and {fasta_file_name}."
         logging.info(message)
+        logging.info("Skipping download...")
         print(message)
+        print("Skipping download...")
         return
 
     logging.info(f"Processing negative dataset. Output files: {tsv_file_name}, {fasta_file_name}")
