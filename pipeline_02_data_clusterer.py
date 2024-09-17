@@ -23,6 +23,18 @@ def run_mmseqs(data_type: str) -> None:
     proteins_file = f"{data_type}_filtered_proteins.fasta"
     output_dir = os.path.join(CLUSTER_DIR, "positive" if data_type == "pos" else "negative")
     
+    # Expected output file after clustering
+    rep_seq_file = os.path.join(output_dir, f"{MMSEQS_FILE_PREFIX}_{data_type}_rep_seq.fasta")
+
+    # Check if the clustering output already exists
+    if os.path.exists(rep_seq_file):
+        message = f"Clustering output for {data_type} data already exists at {rep_seq_file}."
+        logger.info(message)
+        logger.info("Skipping clustering step...")
+        print(message)
+        print("Skipping clustering step...")
+        return
+
     mmseqs_command = [
         "mmseqs", "easy-cluster",
         os.path.join(FETCHED_DIR, proteins_file),
@@ -68,4 +80,4 @@ def run_mmseqs(data_type: str) -> None:
     else:
         logger.warning("No files matching %s_%s* were found.", MMSEQS_FILE_PREFIX, data_type)
 
-    logger.info("Data splitting for %s completed.", data_type)
+    logger.info("Clustering for %s completed.", data_type)
