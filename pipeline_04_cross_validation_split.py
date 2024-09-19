@@ -2,11 +2,11 @@ import os
 import random
 import logging
 from Bio import SeqIO
-import shutil
 
 def perform_cross_validation_split(train_data_dir, num_folds=5):
     """
     Splits the training data into specified number of folds for cross-validation.
+    If the cross-validation split files already exist, the function will skip the splitting step.
     
     Args:
         train_data_dir (str): Path to the training data directory containing 'pos' and 'neg' subdirectories.
@@ -14,6 +14,28 @@ def perform_cross_validation_split(train_data_dir, num_folds=5):
     """
     # Subdirectories for positive and negative data
     data_types = ['pos', 'neg']
+
+    # Check if cross-validation split files already exist
+    all_files_exist = True
+    for fold_num in range(1, num_folds + 1):
+        for data_type in data_types:
+            output_dir = os.path.join(train_data_dir, str(fold_num), data_type)
+            output_file = os.path.join(output_dir, f"{data_type}_fold_{fold_num}.fasta")
+            if not os.path.exists(output_file):
+                all_files_exist = False
+                break
+        if not all_files_exist:
+            break
+
+    if all_files_exist:
+        message = f"Cross-validation split files already exist in {train_data_dir}."
+        logging.info(message)
+        logging.info("Skipping cross-validation splitting step...")
+        print(message)
+        print("Skipping cross-validation splitting step...")
+        return
+
+    # Sequences dictionary to hold sequences for 'pos' and 'neg'
     sequences = {'pos': [], 'neg': []}
     
     # Read sequences from 'pos' and 'neg' directories
@@ -53,12 +75,5 @@ def perform_cross_validation_split(train_data_dir, num_folds=5):
             output_file = os.path.join(output_dir, f"{data_type}_fold_{fold_num}.fasta")
             SeqIO.write(fold_data[data_type], output_file, 'fasta')
             logging.info(f"Saved {len(fold_data[data_type])} {data_type} sequences to {output_file}")
-    
-    # Delete the original 'pos' and 'neg' directories
-    # for data_type in data_types:
-    #     data_path = os.path.join(train_data_dir, data_type)
-    #     if os.path.exists(data_path):
-    #         shutil.rmtree(data_path)
-    #         logging.info(f"Deleted directory {data_path}")
     
     logging.info("Cross-validation data splitting completed")
