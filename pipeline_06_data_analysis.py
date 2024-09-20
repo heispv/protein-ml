@@ -439,15 +439,15 @@ def plot_scientific_name_classification(splitted_data_dir, output_dir, num_class
     
 def extract_cleavage_site_sequences(splitted_data_dir, output_dir):
     """
-    Extracts cleavage site sequences for Multiple Sequence Alignment (MSA) based on ps_length.
+    Extracts cleavage site sequences for Multiple WebLogo based on ps_length.
     For each sequence, extracts 12 AA before the cleavage site, the cleavage site AA, and 2 AA after,
-    totaling 15 AA. Saves the extracted sequences in FASTA format suitable for MSA tools.
+    totaling 15 AA. Saves the extracted sequences in FASTA format suitable for WebLogo tools.
 
     Args:
         splitted_data_dir (str): Path to the directory containing split data ('train' and 'test' directories).
         output_dir (str): Path to the directory where the extracted sequences will be saved.
     """
-    logging.info("Starting cleavage site sequence extraction for MSA.")
+    logging.info("Starting cleavage site sequence extraction for WebLogo.")
     sets = ['train', 'test']
     data_type = 'pos'  # Only positive data has ps_length
 
@@ -543,4 +543,4 @@ def extract_cleavage_site_sequences(splitted_data_dir, output_dir):
         except Exception as e:
             logging.error(f"Error writing to FASTA file {output_file}: {e}")
 
-    logging.info("Cleavage site sequence extraction for MSA completed.")
+    logging.info("Cleavage site sequence extraction for WebLogo completed.")
