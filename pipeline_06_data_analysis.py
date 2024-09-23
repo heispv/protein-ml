@@ -439,108 +439,138 @@ def plot_scientific_name_classification(splitted_data_dir, output_dir, num_class
     
 def extract_cleavage_site_sequences(splitted_data_dir, output_dir):
     """
-    Extracts cleavage site sequences for Multiple WebLogo based on ps_length.
+    Extracts cleavage site sequences based on ps_length.
     For each sequence, extracts 12 AA before the cleavage site, the cleavage site AA, and 2 AA after,
-    totaling 15 AA. Saves the extracted sequences in FASTA format suitable for WebLogo tools.
+    totaling 15 AA. Saves the extracted sequences in FASTA format.
 
     Args:
         splitted_data_dir (str): Path to the directory containing split data ('train' and 'test' directories).
         output_dir (str): Path to the directory where the extracted sequences will be saved.
     """
-    logging.info("Starting cleavage site sequence extraction for WebLogo.")
+    logging.info("Starting cleavage site sequence extraction.")
     sets = ['train', 'test']
-    data_type = 'pos'  # Only positive data has ps_length
 
     # Ensure the output directory exists
     os.makedirs(output_dir, exist_ok=True)
 
     for set_type in sets:
-        tsv_dir = os.path.join(splitted_data_dir, set_type, data_type)
-        # Find the .tsv file in the directory
-        tsv_files = [f for f in os.listdir(tsv_dir) if f.endswith('.tsv')]
-        if not tsv_files:
-            logging.warning(f"No .tsv files found in {tsv_dir}")
-            continue
-        tsv_file_path = os.path.join(tsv_dir, tsv_files[0])
-
-        # Find the .fasta file in the directory
-        fasta_files = [f for f in os.listdir(tsv_dir) if f.endswith('.fasta')]
-        if not fasta_files:
-            logging.warning(f"No .fasta files found in {tsv_dir}")
-            continue
-        fasta_file_path = os.path.join(tsv_dir, fasta_files[0])
-
-        # Read the .tsv file
-        df = pd.read_csv(tsv_file_path, sep='\t')
-        if 'primary_accession' not in df.columns or 'ps_length' not in df.columns:
-            logging.warning(f"'primary_accession' or 'ps_length' columns not found in {tsv_file_path}")
+        set_dir = os.path.join(splitted_data_dir, set_type)
+        if not os.path.isdir(set_dir):
+            logging.warning(f"Set directory {set_dir} does not exist. Skipping.")
             continue
 
-        # Build a dictionary mapping primary_accession to ps_length
-        id_to_ps_length = dict(zip(df['primary_accession'], df['ps_length']))
+        # Walk through all subdirectories in set_dir
+        for root, dirs, files in os.walk(set_dir):
+            if 'pos' in dirs:
+                pos_dir = os.path.join(root, 'pos')
+                logging.info(f"Processing directory: {pos_dir}")
 
-        # Read the .fasta file and build a dictionary mapping primary_accession to sequence
-        try:
-            fasta_sequences = SeqIO.to_dict(SeqIO.parse(fasta_file_path, 'fasta'))
-        except Exception as e:
-            logging.error(f"Error parsing fasta file {fasta_file_path}: {e}")
-            continue
-
-        # Collect extracted sequences
-        extracted_sequences = []
-        for primary_accession, ps_length in id_to_ps_length.items():
-            if primary_accession in fasta_sequences:
-                seq_record = fasta_sequences[primary_accession]
-                seq = seq_record.seq  # This is a Seq object
-                if pd.isna(ps_length):
-                    logging.warning(f"ps_length is NaN for {primary_accession} in {tsv_file_path}")
+                # Find the .tsv file in the pos_dir
+                tsv_files = [f for f in os.listdir(pos_dir) if f.endswith('.tsv')]
+                if not tsv_files:
+                    logging.warning(f"No .tsv files found in {pos_dir}. Skipping.")
                     continue
-                # Ensure ps_length is integer
+                tsv_file_path = os.path.join(pos_dir, tsv_files[0])
+
+                # Find the .fasta file in the pos_dir
+                fasta_files = [f for f in os.listdir(pos_dir) if f.endswith('.fasta')]
+                if not fasta_files:
+                    logging.warning(f"No .fasta files found in {pos_dir}. Skipping.")
+                    continue
+                fasta_file_path = os.path.join(pos_dir, fasta_files[0])
+
+                # Determine relative path to set_dir
+                rel_path = os.path.relpath(pos_dir, set_dir)
+                # Construct the corresponding output directory
+                if rel_path == 'pos':
+                    output_subdir = os.path.join(output_dir, set_type)
+                else:
+                    output_subdir = os.path.join(output_dir, set_type, rel_path)
+                os.makedirs(output_subdir, exist_ok=True)
+                logging.info(f"Output subdirectory: {output_subdir}")
+
+                # Read the .tsv file
                 try:
-                    ps_length = int(ps_length)
-                except ValueError:
-                    logging.warning(f"Invalid ps_length '{ps_length}' for {primary_accession} in {tsv_file_path}")
-                    continue
-                # Calculate indices for extraction (adjusted for 1-based index)
-                start_index = ps_length - 1 - 12
-                end_index = ps_length - 1 + 2  # Exclusive in Python slicing
-
-                # Handle edge cases
-                if start_index < 0:
-                    logging.warning(f"ps_length {ps_length} too small for {primary_accession}. Skipping.")
-                    continue
-                if end_index > len(seq):
-                    logging.warning(f"ps_length {ps_length} + 2 exceeds sequence length for {primary_accession}. Skipping.")
+                    df = pd.read_csv(tsv_file_path, sep='\t')
+                except Exception as e:
+                    logging.error(f"Error reading TSV file {tsv_file_path}: {e}")
                     continue
 
-                # Extract the 15 AA window
-                cleavage_site_seq = seq[start_index:end_index + 1]  # +1 to include the end_index
-                if len(cleavage_site_seq) != 15:
-                    logging.warning(f"Extracted sequence length {len(cleavage_site_seq)} != 15 for {primary_accession}. Skipping.")
+                if 'primary_accession' not in df.columns or 'ps_length' not in df.columns:
+                    logging.warning(f"'primary_accession' or 'ps_length' columns not found in {tsv_file_path}. Skipping.")
                     continue
 
-                # Create a SeqRecord
-                record = SeqRecord(
-                    Seq(str(cleavage_site_seq)),
-                    id=f"{primary_accession}_{ps_length}",
-                    description=""
-                )
-                extracted_sequences.append(record)
-            else:
-                logging.warning(f"Primary accession {primary_accession} not found in fasta file {fasta_file_path}.")
+                # Build a dictionary mapping primary_accession to ps_length
+                id_to_ps_length = dict(zip(df['primary_accession'], df['ps_length']))
 
-        if not extracted_sequences:
-            logging.warning(f"No cleavage site sequences extracted for {set_type} set.")
-            continue
+                # Read the .fasta file and build a dictionary mapping primary_accession to sequence
+                try:
+                    fasta_sequences = SeqIO.to_dict(SeqIO.parse(fasta_file_path, 'fasta'))
+                except Exception as e:
+                    logging.error(f"Error parsing fasta file {fasta_file_path}: {e}")
+                    continue
 
-        # Define output file path
-        output_file = os.path.join(output_dir, f'cleavage_site_sequences_{set_type}.fasta')
+                # Collect extracted sequences
+                extracted_sequences = []
+                for primary_accession, ps_length in id_to_ps_length.items():
+                    if primary_accession in fasta_sequences:
+                        seq_record = fasta_sequences[primary_accession]
+                        seq = seq_record.seq  # This is a Seq object
+                        if pd.isna(ps_length):
+                            logging.warning(f"ps_length is NaN for {primary_accession} in {tsv_file_path}. Skipping.")
+                            continue
+                        # Ensure ps_length is integer
+                        try:
+                            ps_length = int(ps_length)
+                        except ValueError:
+                            logging.warning(f"Invalid ps_length '{ps_length}' for {primary_accession} in {tsv_file_path}. Skipping.")
+                            continue
+                        # Calculate indices for extraction
+                        start_index = ps_length - 12 - 1  # Convert to 0-based index
+                        end_index = ps_length + 2  # Exclusive
 
-        # Write the extracted sequences to a FASTA file
-        try:
-            SeqIO.write(extracted_sequences, output_file, 'fasta')
-            logging.info(f"Saved {len(extracted_sequences)} cleavage site sequences to {output_file}")
-        except Exception as e:
-            logging.error(f"Error writing to FASTA file {output_file}: {e}")
+                        # Handle edge cases
+                        if start_index < 0:
+                            logging.warning(f"ps_length {ps_length} too small for {primary_accession}. Skipping.")
+                            continue
+                        if end_index > len(seq):
+                            logging.warning(f"ps_length {ps_length} + 2 exceeds sequence length for {primary_accession}. Skipping.")
+                            continue
 
-    logging.info("Cleavage site sequence extraction for WebLogo completed.")
+                        # Extract the 15 AA window
+                        cleavage_site_seq = seq[start_index:end_index]
+                        if len(cleavage_site_seq) != 15:
+                            logging.warning(f"Extracted sequence length {len(cleavage_site_seq)} != 15 for {primary_accession}. Skipping.")
+                            continue
+
+                        # Create a SeqRecord
+                        record = SeqRecord(
+                            Seq(str(cleavage_site_seq)),
+                            id=primary_accession,
+                            description=f"cleavage_site_position_{ps_length}"
+                        )
+                        extracted_sequences.append(record)
+                    else:
+                        logging.warning(f"Primary accession {primary_accession} not found in fasta file {fasta_file_path}. Skipping.")
+
+                if not extracted_sequences:
+                    logging.warning(f"No cleavage site sequences extracted for {set_type} set in {pos_dir}.")
+                    continue
+
+                # Define output file path
+                if rel_path == 'pos':
+                    output_filename = f'cleavage_site_sequences_{set_type}.fasta'
+                else:
+                    # Replace os.sep with underscore to create a valid filename
+                    fold_number = rel_path.replace(os.sep, '_')
+                    output_filename = f'cleavage_site_sequences_{set_type}_{fold_number}.fasta'
+                output_file = os.path.join(output_subdir, output_filename)
+
+                # Write the extracted sequences to a FASTA file
+                try:
+                    SeqIO.write(extracted_sequences, output_file, 'fasta')
+                    logging.info(f"Saved {len(extracted_sequences)} cleavage site sequences to {output_file}")
+                except Exception as e:
+                    logging.error(f"Error writing to FASTA file {output_file}: {e}")
+
+    logging.info("Cleavage site sequence extraction completed.")
