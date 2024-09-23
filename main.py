@@ -18,6 +18,9 @@ from pipeline_06_data_analysis import (
     plot_scientific_name_classification,
     extract_cleavage_site_sequences
 )
+from pipeline_07_vonHeijne import perform_vonHeijne_analysis
+import logging
+import os
 
 
 
@@ -125,11 +128,23 @@ def main():
     print("Scientific name classification analysis completed.")
 
     # Extraction of Cleavage Site Sequences
-    print("\nExtracting cleavage site sequences for weblogo:")
-    msa_output_dir = os.path.join('data', 'seq_logo_weblogo')
+    print("\nExtracting cleavage site sequences:")
+    msa_output_dir = os.path.join('data', 'cleavage_site_seqs')
     extract_cleavage_site_sequences(SPLIT_DIR, msa_output_dir)
-    print("Cleavage site sequence extraction for weblogo completed.")
+    print("Cleavage site sequence extraction completed.")
 
+
+    # Von Heijne Analysis
+    print("\nPerforming Von Heijne analysis:")
+    von_heijne_output_dir = os.path.join('data', 'vonHeijne_results')
+    perform_vonHeijne_analysis(
+        cleavage_site_seqs_dir=os.path.join('data', 'cleavage_site_seqs', 'train'),
+        splitted_data_dir=os.path.join('data', 'splited_data'),
+        output_dir=von_heijne_output_dir
+    )
+    print("Von Heijne analysis completed.")
+    
+    
     logging.info("Protein data processing completed")
     print(f"\nLog file saved as: {LOG_FILE}")
 if __name__ == "__main__":
