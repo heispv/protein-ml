@@ -1,1 +1,7 @@
-mmseqs
+requests
+pandas
+numpy
+matplotlib
+seaborn
+biopython
+scikit-learn
