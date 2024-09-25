@@ -18,13 +18,8 @@ from pipeline_06_data_analysis import (
     plot_scientific_name_classification,
     extract_cleavage_site_sequences
 )
-from pipeline_07_vonHeijne import perform_vonHeijne_analysis
-import logging
-import os
-
-
-
-
+from pipeline_07_vonHeijne_n_fold import perform_vonHeijne_analysis
+from pipeline_08_vonHeijne_benchmark import perform_vonHeijne_benchmark_analysis
 import logging
 import os
 
@@ -143,9 +138,21 @@ def main():
         output_dir=von_heijne_output_dir
     )
     print("Von Heijne analysis completed.")
-    
+
+
+    # Von Heijne Benchmark Analysis
+    print("\nPerforming Von Heijne benchmark analysis:")
+    von_heijne_benchmark_output_dir = os.path.join('data', 'vonHeijne_results_benchmark')
+    perform_vonHeijne_benchmark_analysis(
+        cleavage_site_seqs_file=os.path.join('data', 'cleavage_site_seqs', 'train', 'cleavage_site_sequences_train.fasta'),
+        splitted_data_dir=os.path.join('data', 'splited_data', 'test'),
+        threshold_file=os.path.join('data', 'vonHeijne_results', 'final_threshold.txt'),
+        output_dir=von_heijne_benchmark_output_dir
+    )
+    print("Von Heijne benchmark analysis completed.")
     
     logging.info("Protein data processing completed")
     print(f"\nLog file saved as: {LOG_FILE}")
+
 if __name__ == "__main__":
     main()
