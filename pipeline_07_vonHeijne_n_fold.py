@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import logging
 from Bio import SeqIO
-from sklearn.metrics import precision_recall_fscore_support
+from sklearn.metrics import precision_recall_fscore_support, matthews_corrcoef
 from typing import List, Dict, Tuple, Optional
 
 # Define amino acid to index mapping for one-hot encoding
@@ -164,7 +164,8 @@ def evaluate_predictions(predictions: List[int], labels: List[int]) -> Dict[str,
     precision, recall, f1, _ = precision_recall_fscore_support(
         labels, predictions, average='binary', zero_division=0
     )
-    return {'Precision': precision, 'Recall': recall, 'F1': f1}
+    mcc = matthews_corrcoef(labels, predictions)
+    return {'Precision': precision, 'Recall': recall, 'F1': f1, 'MCC': mcc}
 
 
 def perform_vonHeijne_analysis(cleavage_site_seqs_dir: str, splitted_data_dir: str, output_dir: str) -> None:
@@ -173,7 +174,7 @@ def perform_vonHeijne_analysis(cleavage_site_seqs_dir: str, splitted_data_dir: s
     sequences as having a cleavage site or not based on a scoring matrix derived from training data.
 
     Additionally, saves the scoring matrix for each training combination as a CSV file,
-    and saves the thresholds, F1 scores, precision, recall, etc., into a results.csv file.
+    and saves the thresholds, F1 scores, precision, recall, MCC, etc., into a results.csv file.
 
     Args:
         cleavage_site_seqs_dir (str): Path to data/cleavage_site_seqs/train/{1,2,3,4,5}/pos directories.
@@ -192,6 +193,16 @@ def perform_vonHeijne_analysis(cleavage_site_seqs_dir: str, splitted_data_dir: s
         level=logging.INFO
     )
     logging.info("Starting Von Heijne analysis.")
+
+    # Check if the main output files already exist
+    final_threshold_file = os.path.join(output_dir, 'final_threshold.txt')
+    individual_thresholds_csv = os.path.join(output_dir, 'individual_thresholds.csv')
+    results_csv = os.path.join(output_dir, 'results.csv')
+
+    if os.path.exists(final_threshold_file) and os.path.exists(individual_thresholds_csv) and os.path.exists(results_csv):
+        logging.info("Von Heijne analysis output files already exist. Skipping computation.")
+        print("Von Heijne analysis output files already exist. Skipping computation.")
+        return
 
     final_thresholds = []
     results_list = []
@@ -226,11 +237,15 @@ def perform_vonHeijne_analysis(cleavage_site_seqs_dir: str, splitted_data_dir: s
         csv_filename = f'scoring_matrix_train_folds_{train_folds_str}.csv'
         csv_path = os.path.join(output_dir, csv_filename)
 
-        try:
-            scoring_matrix_df.to_csv(csv_path)
-            logging.info(f"Scoring matrix saved to {csv_path}")
-        except Exception as e:
-            logging.error(f"Error saving scoring matrix to CSV file {csv_path}: {e}")
+        # Check if scoring matrix already exists
+        if os.path.exists(csv_path):
+            logging.info(f"Scoring matrix {csv_path} already exists. Skipping saving.")
+        else:
+            try:
+                scoring_matrix_df.to_csv(csv_path)
+                logging.info(f"Scoring matrix saved to {csv_path}")
+            except Exception as e:
+                logging.error(f"Error saving scoring matrix to CSV file {csv_path}: {e}")
 
         # Validation Phase
         logging.info("Validation phase started.")
@@ -287,7 +302,10 @@ def perform_vonHeijne_analysis(cleavage_site_seqs_dir: str, splitted_data_dir: s
 
         # Evaluate
         test_results = evaluate_predictions(test_predictions, test_labels)
-        logging.info(f"Testing phase completed. Threshold: {best_threshold}, Precision: {test_results['Precision']}, Recall: {test_results['Recall']}, F1: {test_results['F1']}")
+        logging.info(
+            f"Testing phase completed. Threshold: {best_threshold}, Precision: {test_results['Precision']}, "
+            f"Recall: {test_results['Recall']}, F1: {test_results['F1']}, MCC: {test_results['MCC']}"
+        )
 
         # Collect results
         result = {
@@ -299,7 +317,8 @@ def perform_vonHeijne_analysis(cleavage_site_seqs_dir: str, splitted_data_dir: s
             'Validation Best F1': best_f1,
             'Test Precision': test_results['Precision'],
             'Test Recall': test_results['Recall'],
-            'Test F1': test_results['F1']
+            'Test F1': test_results['F1'],
+            'Test MCC': test_results['MCC']
         }
         results_list.append(result)
 
@@ -310,20 +329,26 @@ def perform_vonHeijne_analysis(cleavage_site_seqs_dir: str, splitted_data_dir: s
 
         # Save final threshold
         threshold_file = os.path.join(output_dir, 'final_threshold.txt')
-        try:
-            with open(threshold_file, 'w') as f:
-                f.write(f"Final Threshold (Average): {average_threshold}\n")
-            logging.info(f"Final threshold saved to {threshold_file}")
-        except Exception as e:
-            logging.error(f"Error saving final threshold to file {threshold_file}: {e}")
+        if os.path.exists(threshold_file):
+            logging.info(f"Final threshold file {threshold_file} already exists. Skipping saving.")
+        else:
+            try:
+                with open(threshold_file, 'w') as f:
+                    f.write(f"Final Threshold (Average): {average_threshold}\n")
+                logging.info(f"Final threshold saved to {threshold_file}")
+            except Exception as e:
+                logging.error(f"Error saving final threshold to file {threshold_file}: {e}")
 
         # Save individual thresholds
         thresholds_csv = os.path.join(output_dir, 'individual_thresholds.csv')
-        try:
-            pd.DataFrame({'Threshold': final_thresholds}).to_csv(thresholds_csv, index=False)
-            logging.info(f"Individual thresholds saved to {thresholds_csv}")
-        except Exception as e:
-            logging.error(f"Error saving individual thresholds to CSV file {thresholds_csv}: {e}")
+        if os.path.exists(thresholds_csv):
+            logging.info(f"Individual thresholds file {thresholds_csv} already exists. Skipping saving.")
+        else:
+            try:
+                pd.DataFrame({'Threshold': final_thresholds}).to_csv(thresholds_csv, index=False)
+                logging.info(f"Individual thresholds saved to {thresholds_csv}")
+            except Exception as e:
+                logging.error(f"Error saving individual thresholds to CSV file {thresholds_csv}: {e}")
     else:
         logging.error("No thresholds were determined. Please check the input data and logs for issues.")
 
@@ -331,11 +356,14 @@ def perform_vonHeijne_analysis(cleavage_site_seqs_dir: str, splitted_data_dir: s
     if results_list:
         results_df = pd.DataFrame(results_list)
         results_csv = os.path.join(output_dir, 'results.csv')
-        try:
-            results_df.to_csv(results_csv, index=False)
-            logging.info(f"Results saved to {results_csv}")
-        except Exception as e:
-            logging.error(f"Error saving results to CSV file {results_csv}: {e}")
+        if os.path.exists(results_csv):
+            logging.info(f"Results file {results_csv} already exists. Skipping saving.")
+        else:
+            try:
+                results_df.to_csv(results_csv, index=False)
+                logging.info(f"Results saved to {results_csv}")
+            except Exception as e:
+                logging.error(f"Error saving results to CSV file {results_csv}: {e}")
     else:
         logging.error("No results were collected. Please check the input data and logs for issues.")
 
