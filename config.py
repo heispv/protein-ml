@@ -19,3 +19,8 @@ MMSEQS_FILE_PREFIX = f"cluster_results_i{int(100*MMSEQS_IDENTITY)}_c{int(100*MMS
 SPLIT_DIR = os.path.join(DATA_DIR, "splited_data/")
 
 NUM_FOLDS = 5
+
+FEATURES_DIR = os.path.join('data', 'features')
+# Feature extraction parameters
+K_AA_DP = 22  # Number of N-terminal residues for AA and DP
+K_OTHERS = 40  # Number of N-terminal residues for other features
