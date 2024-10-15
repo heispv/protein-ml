@@ -20,6 +20,11 @@ from pipeline_06_data_analysis import (
 )
 from pipeline_07_vonHeijne_n_fold import perform_vonHeijne_analysis
 from pipeline_08_vonHeijne_benchmark import perform_vonHeijne_benchmark_analysis
+from pipeline_09_svm_feature_collection import svm_extract_features_pipeline
+from pipeline_10_feature_selection import perform_feature_selection
+from pipeline_11_svm_hp_tuning import perform_svm_hyperparameter_tuning
+from pipeline_12_svm_benchmark import perform_svm_benchmark
+from pipeline_13_svm_error_analysis import perform_svm_error_analysis
 import logging
 import os
 
@@ -153,6 +158,31 @@ def main():
     
     logging.info("Protein data processing completed")
     print(f"\nLog file saved as: {LOG_FILE}")
+    
+    # Feature Extraction
+    print("\nExtracting features from sequences:")
+    svm_extract_features_pipeline()
+    print("Feature extraction completed.")
+    
+    # Feature Selection
+    print("\nPerforming feature selection:")
+    perform_feature_selection()
+    print("Feature selection completed.")
+    
+    # SVM Hyperparameter Tuning
+    print("\nPerforming SVM hyperparameter tuning:")
+    perform_svm_hyperparameter_tuning()
+    print("SVM hyperparameter tuning completed.")
+    
+    # SVM Benchmarking
+    print("\nPerforming SVM benchmarking:")
+    perform_svm_benchmark()
+    print("SVM benchmarking completed.")
+    
+    # SVM Error Analysis
+    print("\nPerforming SVM error analysis:")
+    perform_svm_error_analysis()
+    print("SVM error analysis completed.")
 
 if __name__ == "__main__":
     main()
