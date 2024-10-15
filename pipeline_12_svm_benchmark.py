@@ -1,5 +1,9 @@
-import pandas as pd
+# pipeline_12_svm_benchmark.py
+
+import os
+import logging
 import numpy as np
+import pandas as pd
 from sklearn.metrics import (
     matthews_corrcoef,
     precision_score,
@@ -10,55 +14,72 @@ from sklearn.metrics import (
 import matplotlib.pyplot as plt
 import seaborn as sns
 import joblib
-from pathlib import Path
-import sys
+from config import (
+    SELECTED_FEATURES_DIR,
+    RESULTS_DIR,
+    RANDOM_SEED,
+    TEST_NORM_PROTEIN_FEATURES_FILE,
+    EXPECTED_ID_COLUMN,
+)
 
-def main():
+logger = logging.getLogger(__name__)
+
+def perform_svm_benchmark():
+    """
+    Performs benchmarking of the trained SVM model on the test dataset.
+    """
+    logger.info("Starting SVM benchmarking pipeline.")
+    
     # Set random seed for reproducibility
-    random_seed = 42
-    np.random.seed(random_seed)
+    np.random.seed(RANDOM_SEED)
 
     # Define paths
-    selected_features_file = Path('data/features/selected_features/final_top_20_features.csv')
-    test_data_file = Path('data/features/testing/test_norm_protein_features.csv')
-    model_file = Path('data/results/final_svm_model.joblib')
-    refined_hyperparams_file = Path('data/results/svm_refined_hyperparameters.csv')
-    output_dir = Path('data/results/svm_benchmark')
-    output_dir.mkdir(parents=True, exist_ok=True)
+    selected_features_file = os.path.join(SELECTED_FEATURES_DIR, 'final_top_20_features.csv')
+    test_data_file = TEST_NORM_PROTEIN_FEATURES_FILE
+    model_file = os.path.join(RESULTS_DIR, 'final_svm_model.joblib')
+    output_dir = os.path.join(RESULTS_DIR, 'svm_benchmark')
+    os.makedirs(output_dir, exist_ok=True)
 
     # Load selected features
-    if not selected_features_file.exists():
-        raise FileNotFoundError(f"Selected features file not found: {selected_features_file}")
+    if not os.path.exists(selected_features_file):
+        logger.error(f"Selected features file not found: {selected_features_file}")
+        return
 
     selected_features_df = pd.read_csv(selected_features_file)
     selected_features = selected_features_df['feature'].tolist()
+    logger.info(f"Loaded selected features from {selected_features_file}")
 
     # Load test dataset
-    if not test_data_file.exists():
-        raise FileNotFoundError(f"Test data file not found: {test_data_file}")
+    if not os.path.exists(test_data_file):
+        logger.error(f"Test data file not found: {test_data_file}")
+        return
 
     test_df = pd.read_csv(test_data_file)
+    logger.info(f"Loaded test data from {test_data_file}")
 
     # Verify presence of accession_id column
-    expected_id_column = 'accession_id'  # Update this if your column has a different name
+    expected_id_column = EXPECTED_ID_COLUMN  # Defined in config.py
     if expected_id_column not in test_df.columns:
         available_columns = ', '.join(test_df.columns)
-        raise KeyError(
+        logger.error(
             f"Expected column '{expected_id_column}' not found in test data. "
             f"Available columns are: {available_columns}"
         )
+        return
 
     # Ensure that selected features are in the test dataframe
     missing_features = [feature for feature in selected_features if feature not in test_df.columns]
     if missing_features:
-        raise ValueError(f"The following selected features are missing in the test dataset: {missing_features}")
+        logger.error(f"The following selected features are missing in the test dataset: {missing_features}")
+        return
 
     # Load the trained SVM model
-    if not model_file.exists():
-        raise FileNotFoundError(f"SVM model file not found: {model_file}")
+    if not os.path.exists(model_file):
+        logger.error(f"SVM model file not found: {model_file}")
+        return
 
     svm_model = joblib.load(model_file)
-    print(f"Loaded trained SVM model from {model_file}")
+    logger.info(f"Loaded trained SVM model from {model_file}")
 
     # Prepare test data
     X_test = test_df[selected_features]
@@ -74,11 +95,11 @@ def main():
     test_precision = precision_score(y_test, y_pred, zero_division=0)
     test_recall = recall_score(y_test, y_pred, zero_division=0)
 
-    print("=== Benchmark Results ===")
-    print(f"MCC: {test_mcc:.4f}")
-    print(f"F1 Score: {test_f1:.4f}")
-    print(f"Precision: {test_precision:.4f}")
-    print(f"Recall: {test_recall:.4f}")
+    logger.info("=== Benchmark Results ===")
+    logger.info(f"MCC: {test_mcc:.4f}")
+    logger.info(f"F1 Score: {test_f1:.4f}")
+    logger.info(f"Precision: {test_precision:.4f}")
+    logger.info(f"Recall: {test_recall:.4f}")
 
     # Confusion matrix
     cm = confusion_matrix(y_test, y_pred)
@@ -87,10 +108,10 @@ def main():
     plt.xlabel('Predicted')
     plt.ylabel('Actual')
     plt.title('Confusion Matrix')
-    cm_file = output_dir / 'confusion_matrix.png'
+    cm_file = os.path.join(output_dir, 'confusion_matrix.png')
     plt.savefig(cm_file)
     plt.close()
-    print(f"Confusion matrix saved to {cm_file}")
+    logger.info(f"Confusion matrix saved to {cm_file}")
 
     # Extract IDs of True Positives (TP) and False Negatives (FN)
     tp_indices = (y_test == 1) & (y_pred == 1)
@@ -100,16 +121,16 @@ def main():
     fn_ids = accession_ids[fn_indices]
 
     # Save TP IDs
-    tp_file = output_dir / 'true_positives_ids.csv'
+    tp_file = os.path.join(output_dir, 'true_positives_ids.csv')
     tp_ids_df = pd.DataFrame({expected_id_column: tp_ids})
     tp_ids_df.to_csv(tp_file, index=False)
-    print(f"True Positive IDs saved to {tp_file}")
+    logger.info(f"True Positive IDs saved to {tp_file}")
 
     # Save FN IDs
-    fn_file = output_dir / 'false_negatives_ids.csv'
+    fn_file = os.path.join(output_dir, 'false_negatives_ids.csv')
     fn_ids_df = pd.DataFrame({expected_id_column: fn_ids})
     fn_ids_df.to_csv(fn_file, index=False)
-    print(f"False Negative IDs saved to {fn_file}")
+    logger.info(f"False Negative IDs saved to {fn_file}")
 
     # Save metrics to a file
     metrics = {
@@ -119,18 +140,8 @@ def main():
         'Recall': [test_recall]
     }
     metrics_df = pd.DataFrame(metrics)
-    metrics_file = output_dir / 'benchmark_metrics.csv'
+    metrics_file = os.path.join(output_dir, 'benchmark_metrics.csv')
     metrics_df.to_csv(metrics_file, index=False)
-    print(f"Benchmark metrics saved to {metrics_file}")
+    logger.info(f"Benchmark metrics saved to {metrics_file}")
 
-    print("=== Benchmarking Completed ===")
-
-if __name__ == '__main__':
-    try:
-        main()
-    except KeyError as e:
-        print(f"KeyError: {e}")
-        sys.exit(1)
-    except Exception as e:
-        print(f"Error: {e}")
-        sys.exit(1)
+    logger.info("SVM benchmarking pipeline completed.")

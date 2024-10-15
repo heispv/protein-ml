@@ -1,24 +1,38 @@
+# pipeline_13_svm_error_analysis.py
+
 import os
+import logging
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-import logging
 from Bio import SeqIO
 from collections import Counter
 import numpy as np
-import sys
+from config import (
+    EXPECTED_ID_COLUMN,
+    SVM_BENCHMARK_DIR,
+    TEST_PROTEIN_FEATURES_FILE,
+    POS_FASTA_FILE,
+    NEG_FASTA_FILE,
+    ERROR_ANALYSIS_OUTPUT_DIR,
+)
 
-def main():
-    # Configure logging
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
-    
+logger = logging.getLogger(__name__)
+
+def perform_svm_error_analysis():
+    """
+    Performs error analysis on the SVM model's predictions by comparing
+    false negatives and true positives.
+    """
+    logger.info("Starting SVM error analysis.")
+
     # Define paths
-    fn_ids_file = 'data/results/svm_benchmark/false_negatives_ids.csv'
-    tp_ids_file = 'data/results/svm_benchmark/true_positives_ids.csv'
-    test_features_file = 'data/features/testing/test_protein_features.csv'  # Not normalized
-    pos_fasta_file = 'data/splited_data/test/pos/cluster_results_i30_c40_pos_rep_seq_test.fasta'
-    neg_fasta_file = 'data/splited_data/test/neg/cluster_results_i30_c40_neg_rep_seq_test.fasta'
-    output_dir = 'data/results/svm_benchmark/error_analysis/'
+    fn_ids_file = os.path.join(SVM_BENCHMARK_DIR, 'false_negatives_ids.csv')
+    tp_ids_file = os.path.join(SVM_BENCHMARK_DIR, 'true_positives_ids.csv')
+    test_features_file = TEST_PROTEIN_FEATURES_FILE  # Not normalized
+    pos_fasta_file = POS_FASTA_FILE
+    neg_fasta_file = NEG_FASTA_FILE
+    output_dir = ERROR_ANALYSIS_OUTPUT_DIR
     os.makedirs(output_dir, exist_ok=True)
 
     # Read FN and TP IDs
@@ -26,57 +40,57 @@ def main():
         fn_ids_df = pd.read_csv(fn_ids_file)
         tp_ids_df = pd.read_csv(tp_ids_file)
     except FileNotFoundError as e:
-        logging.error(f"File not found: {e.filename}")
-        sys.exit(1)
+        logger.error(f"File not found: {e.filename}")
+        return
     except Exception as e:
-        logging.error(f"Error reading FN/TP IDs: {e}")
-        sys.exit(1)
+        logger.error(f"Error reading FN/TP IDs: {e}")
+        return
 
-    id_column = 'accession_id'  # Ensure this matches your CSV files
+    id_column = EXPECTED_ID_COLUMN  # Ensure this matches your CSV files
     if id_column not in fn_ids_df.columns or id_column not in tp_ids_df.columns:
         available_fn_cols = ', '.join(fn_ids_df.columns)
         available_tp_cols = ', '.join(tp_ids_df.columns)
-        logging.error(
+        logger.error(
             f"Expected column '{id_column}' not found.\n"
             f"Available columns in FN IDs: {available_fn_cols}\n"
             f"Available columns in TP IDs: {available_tp_cols}"
         )
-        sys.exit(1)
+        return
 
     fn_ids = fn_ids_df[id_column].dropna().astype(str).tolist()
     tp_ids = tp_ids_df[id_column].dropna().astype(str).tolist()
 
-    logging.info(f"Number of False Negatives (FN): {len(fn_ids)}")
-    logging.info(f"Number of True Positives (TP): {len(tp_ids)}")
+    logger.info(f"Number of False Negatives (FN): {len(fn_ids)}")
+    logger.info(f"Number of True Positives (TP): {len(tp_ids)}")
 
     # Read test protein features (not normalized)
     try:
         test_features_df = pd.read_csv(test_features_file)
     except FileNotFoundError:
-        logging.error(f"Test features file not found: {test_features_file}")
-        sys.exit(1)
+        logger.error(f"Test features file not found: {test_features_file}")
+        return
     except Exception as e:
-        logging.error(f"Error reading test features: {e}")
-        sys.exit(1)
+        logger.error(f"Error reading test features: {e}")
+        return
 
     if id_column not in test_features_df.columns:
         available_columns = ', '.join(test_features_df.columns)
-        logging.error(
+        logger.error(
             f"Expected column '{id_column}' not found in test_protein_features.csv.\n"
             f"Available columns: {available_columns}"
         )
-        sys.exit(1)
+        return
 
     # Read sequences from fasta files
     try:
         pos_sequences = SeqIO.to_dict(SeqIO.parse(pos_fasta_file, 'fasta'))
         neg_sequences = SeqIO.to_dict(SeqIO.parse(neg_fasta_file, 'fasta'))
     except FileNotFoundError as e:
-        logging.error(f"FASTA file not found: {e.filename}")
-        sys.exit(1)
+        logger.error(f"FASTA file not found: {e.filename}")
+        return
     except Exception as e:
-        logging.error(f"Error reading FASTA files: {e}")
-        sys.exit(1)
+        logger.error(f"Error reading FASTA files: {e}")
+        return
 
     # Combine sequences
     all_sequences = {**pos_sequences, **neg_sequences}
@@ -99,9 +113,9 @@ def main():
             missing_tp_ids.append(acc)
 
     if missing_fn_ids:
-        logging.warning(f"{len(missing_fn_ids)} FN accession IDs are missing in sequences.")
+        logger.warning(f"{len(missing_fn_ids)} FN accession IDs are missing in sequences.")
     if missing_tp_ids:
-        logging.warning(f"{len(missing_tp_ids)} TP accession IDs are missing in sequences.")
+        logger.warning(f"{len(missing_tp_ids)} TP accession IDs are missing in sequences.")
 
     # Function to get first 22 residues
     def get_first_22_residues(sequences):
@@ -151,7 +165,7 @@ def main():
     aa_comp_df = pd.DataFrame(data)
 
     if aa_comp_df.empty:
-        logging.warning("Amino acid composition DataFrame is empty. Skipping amino acid composition plot.")
+        logger.warning("Amino acid composition DataFrame is empty. Skipping amino acid composition plot.")
     else:
         # Ensure that 'Group' has the correct categories
         aa_comp_df['Group'] = aa_comp_df['Group'].astype('category')
@@ -164,23 +178,18 @@ def main():
         plt.xlabel('Amino Acid')
         plt.ylabel('Percentage')
         
-        # Seaborn should automatically handle the legend. Remove explicit legend calls.
-        # If you still need to adjust the legend, you can do so using the Axes object.
-        # For example, to move the legend outside the plot:
-        # ax.legend(title='Group', loc='upper left', bbox_to_anchor=(1, 1))
-        
         plt.tight_layout()
         output_file = os.path.join(output_dir, 'aa_composition_fn_vs_tp.png')
         plt.savefig(output_file)
         plt.close()
-        logging.info(f"Saved amino acid composition plot to {output_file}")
+        logger.info(f"Saved amino acid composition plot to {output_file}")
 
     # Task 2: Compare sequence lengths
     fn_lengths = [len(str(seq_record.seq)) for seq_record in fn_sequences]
     tp_lengths = [len(str(seq_record.seq)) for seq_record in tp_sequences]
 
     if not fn_lengths or not tp_lengths:
-        logging.warning("One of the groups (FN or TP) has no sequences. Skipping sequence length plots.")
+        logger.warning("One of the groups (FN or TP) has no sequences. Skipping sequence length plots.")
     else:
         length_data = pd.DataFrame({
             'Sequence Length': fn_lengths + tp_lengths,
@@ -204,12 +213,11 @@ def main():
         plt.title('Protein Sequence Length Distribution: FN vs TP')
         plt.xlabel('Sequence Length')
         plt.ylabel('Density')
-        # Seaborn automatically handles the legend, so no need to add it manually
         plt.tight_layout()
         output_file = os.path.join(output_dir, 'sequence_length_distribution_combined.png')
         plt.savefig(output_file)
         plt.close()
-        logging.info(f"Saved combined sequence length plot to {output_file}")
+        logger.info(f"Saved combined sequence length plot to {output_file}")
 
     # Task 3: Compare features
     features = [
@@ -225,7 +233,7 @@ def main():
 
     missing_features = [feat for feat in features if feat not in test_features_df.columns]
     if missing_features:
-        logging.warning(f"The following features are missing in test_protein_features.csv: {missing_features}")
+        logger.warning(f"The following features are missing in test_protein_features.csv: {missing_features}")
 
     # Extract features for FN and TP
     fn_features_df = test_features_df[test_features_df[id_column].isin(fn_ids)]
@@ -233,14 +241,14 @@ def main():
 
     for feature in features:
         if feature not in test_features_df.columns:
-            logging.warning(f"Feature '{feature}' is missing. Skipping boxplot for this feature.")
+            logger.warning(f"Feature '{feature}' is missing. Skipping boxplot for this feature.")
             continue  # Skip missing features
 
         fn_feature_values = fn_features_df[feature].dropna().values
         tp_feature_values = tp_features_df[feature].dropna().values
 
         if len(fn_feature_values) == 0 or len(tp_feature_values) == 0:
-            logging.warning(f"No data available for feature '{feature}' in one of the groups. Skipping boxplot.")
+            logger.warning(f"No data available for feature '{feature}' in one of the groups. Skipping boxplot.")
             continue  # Skip if no data in one of the groups
 
         data = pd.DataFrame({
@@ -260,13 +268,6 @@ def main():
         output_file = os.path.join(output_dir, f'{feature}_boxplot_fn_vs_tp.png')
         plt.savefig(output_file)
         plt.close()
-        logging.info(f"Saved boxplot for {feature} to {output_file}")
+        logger.info(f"Saved boxplot for {feature} to {output_file}")
 
-    logging.info("Error analysis completed.")
-
-if __name__ == '__main__':
-    try:
-        main()
-    except Exception as e:
-        logging.error(f"An unexpected error occurred: {e}")
-        sys.exit(1)
+    logger.info("SVM error analysis completed.")
