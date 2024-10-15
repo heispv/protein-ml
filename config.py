@@ -24,3 +24,37 @@ FEATURES_DIR = os.path.join('data', 'features')
 # Feature extraction parameters
 K_AA_DP = 22  # Number of N-terminal residues for AA and DP
 K_OTHERS = 40  # Number of N-terminal residues for other features
+
+RANDOM_SEED = 42
+
+SELECTED_FEATURES_DIR = os.path.join(FEATURES_DIR, 'selected_features')
+
+PROTEIN_FEATURES_FILE = os.path.join(FEATURES_DIR, 'protein_features.csv')
+
+
+N_JOBS = -1  # Number of parallel jobs for cross-validation (-1 uses all processors)
+
+RESULTS_DIR = os.path.join(DATA_DIR, 'results')
+
+NORM_PROTEIN_FEATURES_FILE = os.path.join(FEATURES_DIR, 'norm_protein_features.csv')
+
+
+EXPECTED_ID_COLUMN = 'accession_id'
+
+TEST_FEATURES_DIR = os.path.join(FEATURES_DIR, 'testing')
+TEST_NORM_PROTEIN_FEATURES_FILE = os.path.join(TEST_FEATURES_DIR, 'test_norm_protein_features.csv')
+
+
+# Paths for SVM benchmarking and error analysis
+SVM_BENCHMARK_DIR = os.path.join(RESULTS_DIR, 'svm_benchmark')
+FALSE_NEGATIVES_IDS_FILE = os.path.join(SVM_BENCHMARK_DIR, 'false_negatives_ids.csv')
+TRUE_POSITIVES_IDS_FILE = os.path.join(SVM_BENCHMARK_DIR, 'true_positives_ids.csv')
+ERROR_ANALYSIS_OUTPUT_DIR = os.path.join(SVM_BENCHMARK_DIR, 'error_analysis')
+
+# Test features file (not normalized)
+TEST_FEATURES_DIR = os.path.join(FEATURES_DIR, 'testing')
+TEST_PROTEIN_FEATURES_FILE = os.path.join(TEST_FEATURES_DIR, 'test_protein_features.csv')  # Not normalized
+
+# Paths for test FASTA files
+POS_FASTA_FILE = os.path.join(SPLIT_DIR, 'test', 'pos', f'{MMSEQS_FILE_PREFIX}_pos_rep_seq_test.fasta')
+NEG_FASTA_FILE = os.path.join(SPLIT_DIR, 'test', 'neg', f'{MMSEQS_FILE_PREFIX}_neg_rep_seq_test.fasta')
