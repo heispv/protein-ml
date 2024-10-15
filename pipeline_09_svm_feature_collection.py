@@ -1,8 +1,12 @@
 import os
+import logging
+import numpy as np
 import pandas as pd
 from Bio import SeqIO
-from pathlib import Path
-import numpy as np
+from typing import Dict, List
+from config import SPLIT_DIR, FEATURES_DIR
+
+logger = logging.getLogger(__name__)
 
 # Define the scales as dictionaries
 HYDROPATHY_SCALE = { 
@@ -32,8 +36,6 @@ TRANSMEMBRANE_TENDENCY = {
     'M': 1.400, 'N': -1.620, 'P': -1.440, 'Q': -1.840, 'R': -2.570,
     'S': -0.530, 'T': -0.320, 'V': 1.460, 'W': 1.530, 'Y': 0.490
 }
-
-# Feature Extraction Functions
 
 def extract_composition(sequence, window=20):
     """
@@ -130,7 +132,7 @@ def extract_features(sequence):
     sequence_set = set(sequence)
     invalid_aas = sequence_set - valid_aas
     if invalid_aas:
-        print(f"Warning: Sequence contains invalid amino acids: {invalid_aas}. These will be treated as having a scale value of 0.0.")
+        logger.warning(f"Sequence contains invalid amino acids: {invalid_aas}. These will be treated as having a scale value of 0.0.")
     
     features = {}
     
@@ -164,8 +166,9 @@ def parse_fasta_files(pos_dir, neg_dir):
     data = []
     
     # Process positive samples
-    pos_files = list(Path(pos_dir).glob("*.fasta"))
-    for filepath in pos_files:
+    pos_files = [f for f in os.listdir(pos_dir) if f.endswith('.fasta')]
+    for filename in pos_files:
+        filepath = os.path.join(pos_dir, filename)
         for record in SeqIO.parse(filepath, "fasta"):
             seq = str(record.seq).upper()
             accession_id = record.id
@@ -175,8 +178,9 @@ def parse_fasta_files(pos_dir, neg_dir):
             data.append(features)
     
     # Process negative samples
-    neg_files = list(Path(neg_dir).glob("*.fasta"))
-    for filepath in neg_files:
+    neg_files = [f for f in os.listdir(neg_dir) if f.endswith('.fasta')]
+    for filename in neg_files:
+        filepath = os.path.join(neg_dir, filename)
         for record in SeqIO.parse(filepath, "fasta"):
             seq = str(record.seq).upper()
             accession_id = record.id
@@ -192,29 +196,34 @@ def parse_fasta_files(pos_dir, neg_dir):
     df = df[cols]
     return df
 
-def main():
+def svm_extract_features_pipeline():
+    """
+    Extracts features from protein sequences and saves them to CSV files.
+    """
+    logger.info("Starting feature extraction pipeline.")
+    
     # Define directories
-    base_dir = Path('data/splited_data/train')  # Ensure this path is correct
-    pos_dir = base_dir / 'pos'
-    neg_dir = base_dir / 'neg'
+    train_data_dir = os.path.join(SPLIT_DIR, 'train')
+    pos_dir = os.path.join(train_data_dir, 'pos')
+    neg_dir = os.path.join(train_data_dir, 'neg')
     
     # Check if input directories exist
-    if not pos_dir.exists():
-        raise FileNotFoundError(f"Positive directory not found: {pos_dir}")
-    if not neg_dir.exists():
-        raise FileNotFoundError(f"Negative directory not found: {neg_dir}")
+    if not os.path.exists(pos_dir):
+        logger.error(f"Positive directory not found: {pos_dir}")
+        return
+    if not os.path.exists(neg_dir):
+        logger.error(f"Negative directory not found: {neg_dir}")
+        return
     
     # Extract features and create DataFrame
+    logger.info("Extracting features from training data.")
     df = parse_fasta_files(pos_dir, neg_dir)
     
-    # Display the first few rows
-    print(df.head())
-    
     # Define the output directory
-    output_dir = Path('data/features')
+    output_dir = FEATURES_DIR
     
     # Create the directory if it doesn't exist
-    output_dir.mkdir(parents=True, exist_ok=True)
+    os.makedirs(output_dir, exist_ok=True)
     
     # Identify feature columns (excluding 'accession_id' and 'label')
     feature_cols = [col for col in df.columns if col not in ['accession_id', 'label']]
@@ -224,62 +233,61 @@ def main():
     feature_stds = df[feature_cols].std()
     
     # Save mean and std to CSV files
-    feature_means.to_csv(output_dir / 'feature_means.csv', header=True)
-    feature_stds.to_csv(output_dir / 'feature_stds.csv', header=True)
+    feature_means.to_csv(os.path.join(output_dir, 'feature_means.csv'), header=True)
+    feature_stds.to_csv(os.path.join(output_dir, 'feature_stds.csv'), header=True)
     
     # Save the DataFrame to a CSV file
-    output_file = output_dir / 'protein_features.csv'
+    output_file = os.path.join(output_dir, 'protein_features.csv')
     df.to_csv(output_file, index=False)
-    print(f"Features saved to {output_file}")
+    logger.info(f"Features saved to {output_file}")
     
     # Normalize the feature columns
     df[feature_cols] = (df[feature_cols] - feature_means) / feature_stds
     
-    # Save the DataFrame to a CSV file
-    output_file = output_dir / 'norm_protein_features.csv'
-    df.to_csv(output_file, index=False)
-    print(f"Features saved to {output_file}")
-    print(f"Feature means saved to {output_dir / 'feature_means.csv'}")
-    print(f"Feature stds saved to {output_dir / 'feature_stds.csv'}")
+    # Save the normalized DataFrame to a CSV file
+    output_file_norm = os.path.join(output_dir, 'norm_protein_features.csv')
+    df.to_csv(output_file_norm, index=False)
+    logger.info(f"Normalized features saved to {output_file_norm}")
+    logger.info(f"Feature means saved to {os.path.join(output_dir, 'feature_means.csv')}")
+    logger.info(f"Feature stds saved to {os.path.join(output_dir, 'feature_stds.csv')}")
     
-    
-    ################## Test Set
-    test_base_dir = Path('data/splited_data/test')  # Ensure this path is correct
-    test_pos_dir = test_base_dir / 'pos'
-    test_neg_dir = test_base_dir / 'neg'
+    # Process test set
+    logger.info("Extracting features from test data.")
+    test_data_dir = os.path.join(SPLIT_DIR, 'test')
+    test_pos_dir = os.path.join(test_data_dir, 'pos')
+    test_neg_dir = os.path.join(test_data_dir, 'neg')
     
     # Check if input directories exist
-    if not test_pos_dir.exists():
-        raise FileNotFoundError(f"Positive directory not found: {test_pos_dir}")
-    if not test_neg_dir.exists():
-        raise FileNotFoundError(f"Negative directory not found: {test_neg_dir}")
+    if not os.path.exists(test_pos_dir):
+        logger.error(f"Positive directory not found: {test_pos_dir}")
+        return
+    if not os.path.exists(test_neg_dir):
+        logger.error(f"Negative directory not found: {test_neg_dir}")
+        return
     
     # Extract features and create DataFrame
     test_df = parse_fasta_files(test_pos_dir, test_neg_dir)
     
-    # Display the first few rows
-    print(test_df.head())
-    
-    # Define the output directory
-    test_output_dir = Path('data/features/testing/')
+    # Define the output directory for test features
+    test_output_dir = os.path.join(FEATURES_DIR, 'testing')
     
     # Create the directory if it doesn't exist
-    test_output_dir.mkdir(parents=True, exist_ok=True)
+    os.makedirs(test_output_dir, exist_ok=True)
     
     # Identify feature columns (excluding 'accession_id' and 'label')
     test_feature_cols = [col for col in test_df.columns if col not in ['accession_id', 'label']]
     
     # Save the DataFrame to a CSV file
-    test_output_file = test_output_dir / 'test_protein_features.csv'
+    test_output_file = os.path.join(test_output_dir, 'test_protein_features.csv')
     test_df.to_csv(test_output_file, index=False)
-    print(f"Features saved to {test_output_file}")
+    logger.info(f"Features saved to {test_output_file}")
     
+    # Normalize the test feature columns using the training means and stds
     test_df[test_feature_cols] = (test_df[test_feature_cols] - feature_means) / feature_stds
     
-    # Save the DataFrame to a CSV file
-    test_output_file = test_output_dir / 'test_norm_protein_features.csv'
-    test_df.to_csv(test_output_file, index=False)
-    print(f"Features saved to {test_output_file}")
-
-if __name__ == "__main__":
-    main()
+    # Save the normalized DataFrame to a CSV file
+    test_output_file_norm = os.path.join(test_output_dir, 'test_norm_protein_features.csv')
+    test_df.to_csv(test_output_file_norm, index=False)
+    logger.info(f"Normalized test features saved to {test_output_file_norm}")
+    
+    logger.info("Feature extraction pipeline completed.")
