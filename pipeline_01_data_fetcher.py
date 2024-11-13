@@ -24,6 +24,7 @@ def get_batch(batch_url: str, session: requests.Session) -> Iterator[Tuple[reque
     while batch_url:
         batch_count += 1
         logging.info(f"Fetching batch {batch_count} from URL: {batch_url}")
+        print(f"Fetching batch {batch_count}")
         response = session.get(batch_url)
         response.raise_for_status()
         total = response.headers["x-total-results"]
