@@ -8,13 +8,13 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from collections import Counter
 
-def analyze_protein_length_distribution(splitted_data_dir, output_dir, max_length=None):
+def analyze_protein_length_distribution(split_dir, output_dir, max_length=None):
     """
     Analyzes the distribution of protein lengths for positive and negative sequences in training and test sets.
     Generates combined histogram and density plots, and saves them in the specified output directory.
 
     Args:
-        splitted_data_dir (str): Path to the directory containing split data ('train' and 'test' directories).
+        split_dir (str): Path to the directory containing split data ('train' and 'test' directories).
         output_dir (str): Path to the directory where the plots will be saved.
         max_length (int, optional): Maximum protein length to include in the analysis. Sequences longer than
                                     this length will be filtered out.
@@ -30,7 +30,7 @@ def analyze_protein_length_distribution(splitted_data_dir, output_dir, max_lengt
         length_data = []
 
         for data_type in data_types:
-            tsv_dir = os.path.join(splitted_data_dir, set_type, data_type)
+            tsv_dir = os.path.join(split_dir, set_type, data_type)
             # Find the .tsv file in the directory
             tsv_files = [f for f in os.listdir(tsv_dir) if f.endswith('.tsv')]
             if not tsv_files:
@@ -88,13 +88,13 @@ def analyze_protein_length_distribution(splitted_data_dir, output_dir, max_lengt
 
     logging.info("Protein length distribution analysis completed.")
 
-def analyze_signal_peptide_length_distribution(splitted_data_dir, output_dir, max_length=None):
+def analyze_signal_peptide_length_distribution(split_dir, output_dir, max_length=None):
     """
     Analyzes the distribution of signal peptide lengths (ps_length) for positive sequences in training and test sets.
     Generates combined histogram and density plots, and saves them in the specified output directory.
 
     Args:
-        splitted_data_dir (str): Path to the directory containing split data ('train' and 'test' directories).
+        split_dir (str): Path to the directory containing split data ('train' and 'test' directories).
         output_dir (str): Path to the directory where the plots will be saved.
         max_length (int, optional): Maximum SP length to include in the analysis. Values longer than
                                     this length will be filtered out.
@@ -107,7 +107,7 @@ def analyze_signal_peptide_length_distribution(splitted_data_dir, output_dir, ma
     os.makedirs(output_dir, exist_ok=True)
 
     for set_type in sets:
-        tsv_dir = os.path.join(splitted_data_dir, set_type, data_type)
+        tsv_dir = os.path.join(split_dir, set_type, data_type)
         # Find the .tsv file in the directory
         tsv_files = [f for f in os.listdir(tsv_dir) if f.endswith('.tsv')]
         if not tsv_files:
@@ -158,13 +158,13 @@ def analyze_signal_peptide_length_distribution(splitted_data_dir, output_dir, ma
 
     logging.info("Signal peptide length distribution analysis completed.")
 
-def compare_amino_acid_composition(splitted_data_dir, output_dir):
+def compare_amino_acid_composition(split_dir, output_dir):
     """
     Compares the amino acid composition of SP sequences against the SwissProt background.
     Generates bar plots comparing the AA compositions and saves them in the specified output directory.
 
     Args:
-        splitted_data_dir (str): Path to the directory containing split data ('train' and 'test' directories).
+        split_dir (str): Path to the directory containing split data ('train' and 'test' directories).
         output_dir (str): Path to the directory where the plots will be saved.
     """
     logging.info("Starting comparative amino acid composition analysis.")
@@ -187,7 +187,7 @@ def compare_amino_acid_composition(splitted_data_dir, output_dir):
     os.makedirs(output_dir, exist_ok=True)
 
     for set_type in sets:
-        tsv_dir = os.path.join(splitted_data_dir, set_type, data_type)
+        tsv_dir = os.path.join(split_dir, set_type, data_type)
         # Find the .tsv file in the directory
         tsv_files = [f for f in os.listdir(tsv_dir) if f.endswith('.tsv')]
         if not tsv_files:
@@ -289,13 +289,13 @@ def compare_amino_acid_composition(splitted_data_dir, output_dir):
 
     logging.info("Comparative amino acid composition analysis completed.")
     
-def plot_taxonomic_classification(splitted_data_dir, output_dir, num_classifications=5):
+def plot_taxonomic_classification(split_dir, output_dir, num_classifications=5):
     """
     Plots the taxonomic classification distribution as pie charts for training and test sets,
     combining both positive and negative data.
 
     Args:
-        splitted_data_dir (str): Path to the directory containing split data ('train' and 'test' directories).
+        split_dir (str): Path to the directory containing split data ('train' and 'test' directories).
         output_dir (str): Path to the directory where the plots will be saved.
         num_classifications (int): Number of top classifications to display in the pie chart.
     """
@@ -309,7 +309,7 @@ def plot_taxonomic_classification(splitted_data_dir, output_dir, num_classificat
     for set_type in sets:
         lineage_counts = {}
         for data_type in data_types:
-            tsv_dir = os.path.join(splitted_data_dir, set_type, data_type)
+            tsv_dir = os.path.join(split_dir, set_type, data_type)
             # Find the .tsv file in the directory
             tsv_files = [f for f in os.listdir(tsv_dir) if f.endswith('.tsv')]
             if not tsv_files:
@@ -363,13 +363,13 @@ def plot_taxonomic_classification(splitted_data_dir, output_dir, num_classificat
 
     logging.info("Taxonomic classification analysis completed.")
     
-def plot_scientific_name_classification(splitted_data_dir, output_dir, num_classifications=5):
+def plot_scientific_name_classification(split_dir, output_dir, num_classifications=5):
     """
     Plots the scientific name classification distribution as pie charts for training and test sets,
     combining both positive and negative data.
 
     Args:
-        splitted_data_dir (str): Path to the directory containing split data ('train' and 'test' directories).
+        split_dir (str): Path to the directory containing split data ('train' and 'test' directories).
         output_dir (str): Path to the directory where the plots will be saved.
         num_classifications (int): Number of top scientific names to display in the pie chart.
     """
@@ -383,7 +383,7 @@ def plot_scientific_name_classification(splitted_data_dir, output_dir, num_class
     for set_type in sets:
         scientific_name_counts = {}
         for data_type in data_types:
-            tsv_dir = os.path.join(splitted_data_dir, set_type, data_type)
+            tsv_dir = os.path.join(split_dir, set_type, data_type)
             # Find the .tsv file in the directory
             tsv_files = [f for f in os.listdir(tsv_dir) if f.endswith('.tsv')]
             if not tsv_files:
@@ -437,14 +437,14 @@ def plot_scientific_name_classification(splitted_data_dir, output_dir, num_class
 
     logging.info("Scientific name classification analysis completed.")
     
-def extract_cleavage_site_sequences(splitted_data_dir, output_dir):
+def extract_cleavage_site_sequences(split_dir, output_dir):
     """
     Extracts cleavage site sequences based on ps_length.
     For each sequence, extracts 12 AA before the cleavage site, the cleavage site AA, and 2 AA after,
     totaling 15 AA. Saves the extracted sequences in FASTA format.
 
     Args:
-        splitted_data_dir (str): Path to the directory containing split data ('train' and 'test' directories).
+        split_dir (str): Path to the directory containing split data ('train' and 'test' directories).
         output_dir (str): Path to the directory where the extracted sequences will be saved.
     """
     logging.info("Starting cleavage site sequence extraction.")
@@ -454,7 +454,7 @@ def extract_cleavage_site_sequences(splitted_data_dir, output_dir):
     os.makedirs(output_dir, exist_ok=True)
 
     for set_type in sets:
-        set_dir = os.path.join(splitted_data_dir, set_type)
+        set_dir = os.path.join(split_dir, set_type)
         if not os.path.isdir(set_dir):
             logging.warning(f"Set directory {set_dir} does not exist. Skipping.")
             continue
