@@ -30,18 +30,18 @@ def filter_tsv_by_fasta_ids(fasta_file_path, tsv_file_path, output_tsv_path):
     filtered_df.to_csv(output_tsv_path, sep='\t', index=False)
     logging.info(f"Saved filtered tsv file to {output_tsv_path}")
 
-def process_all_fasta_files(fetched_data_dir, splitted_data_dir):
+def process_all_fasta_files(fetched_dir, split_dir):
     """
-    Process all .fasta files in the splitted_data_dir, filter the corresponding .tsv files,
+    Process all .fasta files in the split_dir, filter the corresponding .tsv files,
     and save the filtered .tsv files in the same directories as the .fasta files.
 
     Args:
-        fetched_data_dir (str): Directory containing the fetched .tsv files.
-        splitted_data_dir (str): Directory containing the splitted data (train/test and cross-validation folds).
+        fetched_dir (str): Directory containing the fetched .tsv files.
+        split_dir (str): Directory containing the splitted data (train/test and cross-validation folds).
     """
     # Paths to the fetched .tsv files
-    pos_tsv_file = os.path.join(fetched_data_dir, 'pos_filtered_proteins.tsv')
-    neg_tsv_file = os.path.join(fetched_data_dir, 'neg_filtered_proteins.tsv')
+    pos_tsv_file = os.path.join(fetched_dir, 'pos_filtered_proteins.tsv')
+    neg_tsv_file = os.path.join(fetched_dir, 'neg_filtered_proteins.tsv')
 
     # Check that the tsv files exist
     if not os.path.exists(pos_tsv_file):
@@ -51,8 +51,8 @@ def process_all_fasta_files(fetched_data_dir, splitted_data_dir):
         logging.error(f"File {neg_tsv_file} does not exist.")
         return
 
-    # For each .fasta file in splitted_data_dir
-    for root, dirs, files in os.walk(splitted_data_dir):
+    # For each .fasta file in split_dir
+    for root, dirs, files in os.walk(split_dir):
         for file in files:
             if file.endswith('.fasta'):
                 fasta_file_path = os.path.join(root, file)
