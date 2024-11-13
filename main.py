@@ -1,8 +1,28 @@
 # main.py
 
 from urllib.parse import quote
-from config import (BASE_URL, POSITIVE_QUERY, NEGATIVE_QUERY, BATCH_SIZE, LOG_FILE,
-                    SPLIT_DIR, MMSEQS_FILE_PREFIX, NUM_FOLDS, FETCHED_DIR, CLUSTER_DIR)
+from config import (
+    BASE_URL,
+    POSITIVE_QUERY,
+    NEGATIVE_QUERY,
+    BATCH_SIZE,
+    LOG_FILE,
+    DATA_DIR,
+    SPLIT_DIR,
+    MMSEQS_FILE_PREFIX,
+    NUM_FOLDS,
+    FETCHED_DIR,
+    CLUSTER_DIR,
+    MAX_LENGTH,
+    PROTEIN_LENGTH_DIST_DIR,
+    SIGNAL_PEPTIDE_LENGTH_DIST_DIR,
+    COMPARATIVE_AA_COMPOSITION_DIR,
+    TAXONOMIC_CLASSIFICATION_DIR,
+    SCIENTIFIC_NAME_CLASSIFICATION_DIR,
+    CLEAVAGE_SITE_SEQS_DIR,
+    VON_HEIJNE_RESULTS_DIR,
+    VON_HEIJNE_BENCHMARK_RESULTS_DIR,
+)
 from utils import setup_logging
 from pipeline_01_data_fetcher import create_session
 from pipeline_01_data_filterer import get_pos_dataset, get_neg_dataset
@@ -16,7 +36,7 @@ from pipeline_06_data_analysis import (
     compare_amino_acid_composition,
     plot_taxonomic_classification,
     plot_scientific_name_classification,
-    extract_cleavage_site_sequences
+    extract_cleavage_site_sequences,
 )
 from pipeline_07_vonHeijne_n_fold import perform_vonHeijne_analysis
 from pipeline_08_vonHeijne_benchmark import perform_vonHeijne_benchmark_analysis
@@ -28,138 +48,152 @@ from pipeline_13_svm_error_analysis import perform_svm_error_analysis
 import logging
 import os
 
+
 def main():
+    # Setup logging
     setup_logging()
     logging.info("Starting protein data processing")
+    
+    # Create a session for data fetching
     session = create_session()
     
+    # Construct URLs for positive and negative datasets
     pos_url = f"{BASE_URL}?format=json&query={quote(POSITIVE_QUERY)}&size={BATCH_SIZE}"
     neg_url = f"{BASE_URL}?format=json&query={quote(NEGATIVE_QUERY)}&size={BATCH_SIZE}"
     
+    # Fetch and filter positive dataset
     print("Processing positive dataset:")
     get_pos_dataset(pos_url, "pos_filtered_proteins", session)
     
+    # Fetch and filter negative dataset
     print("\nProcessing negative dataset:")
     get_neg_dataset(neg_url, "neg_filtered_proteins", session)
-
-    print("\nClustering positive data:")
-    run_mmseqs('pos')
-    print("Positive data clustering done.")
     
-    print("\nClustering negative data:")
-    run_mmseqs('neg')
-    print("Negative data clustering done.")
-
-    # Data Splitting
+    # Clustering datasets
+    for data_type in ['pos', 'neg']:
+        print(f"\nClustering {data_type} data:")
+        run_mmseqs(data_type)
+        print(f"{data_type.capitalize()} data clustering done.")
+    
+    # Data Splitting into training and testing sets
     print("\nSplitting data into training and testing sets:")
     data_types = ['pos', 'neg']
     for data_type in data_types:
-        if data_type == 'pos':
-            input_dir = os.path.join(CLUSTER_DIR, 'positive')
-            fasta_file = os.path.join(input_dir, f"{MMSEQS_FILE_PREFIX}_pos_rep_seq.fasta")
-        else:
-            input_dir = os.path.join(CLUSTER_DIR, 'negative')
-            fasta_file = os.path.join(input_dir, f"{MMSEQS_FILE_PREFIX}_neg_rep_seq.fasta")
-
+        input_dir = os.path.join(CLUSTER_DIR, 'positive' if data_type == 'pos' else 'negative')
+        fasta_file = os.path.join(input_dir, f"{MMSEQS_FILE_PREFIX}_{data_type}_rep_seq.fasta")
+        
         # Check if fasta file exists
         if not os.path.exists(fasta_file):
             logging.error(f"Fasta file {fasta_file} does not exist.")
             continue
-
-        # Output directories
+        
+        # Define output directories
         train_output_dir = os.path.join(SPLIT_DIR, 'train', data_type)
         test_output_dir = os.path.join(SPLIT_DIR, 'test', data_type)
-
-        # Create output directories if they do not exist
         os.makedirs(train_output_dir, exist_ok=True)
         os.makedirs(test_output_dir, exist_ok=True)
-
-        # Output file paths
+        
+        # Define output file paths
         base_filename = os.path.basename(fasta_file)
         train_output_path = os.path.join(train_output_dir, base_filename.replace('.fasta', '_train.fasta'))
         test_output_path = os.path.join(test_output_dir, base_filename.replace('.fasta', '_test.fasta'))
-
+        
         # Split sequences
         split_fasta_sequences(fasta_file, train_output_path, test_output_path)
         print(f"Data splitting for {data_type} completed.")
         logging.info(f"Data splitting for {data_type} completed.")
-
-    # Cross-Validation Splitting
+    
+    # Cross-Validation Splitting on Training Data
     print("\nPerforming cross-validation splitting on training data:")
-    train_data_dir = os.path.join(SPLIT_DIR, 'train')
-    perform_cross_validation_split(train_data_dir, num_folds=NUM_FOLDS)
+    perform_cross_validation_split(
+        train_data_dir=os.path.join(SPLIT_DIR, 'train'),
+        num_folds=NUM_FOLDS
+    )
     print("Cross-validation data splitting completed.")
-
-    # Filtering .tsv files
+    
+    # Filtering .tsv Files Based on Fasta IDs
     print("\nFiltering .tsv files based on fasta IDs:")
-    fetched_data_dir = FETCHED_DIR
-    splitted_data_dir = SPLIT_DIR
-    process_all_fasta_files(fetched_data_dir, splitted_data_dir)
+    process_all_fasta_files(
+        fetched_dir=FETCHED_DIR,
+        split_dir=SPLIT_DIR
+    )
     print("Filtering of .tsv files completed.")
     
-    # Data Analysis for Protein Length
+    # Data Analysis: Protein Length Distribution
     print("\nAnalyzing protein length distribution:")
-    figures_output_dir = os.path.join('figures', 'protein_length_dist')
-    analyze_protein_length_distribution(SPLIT_DIR, figures_output_dir, max_length=5000)
+    analyze_protein_length_distribution(
+        split_dir=SPLIT_DIR,
+        output_dir=PROTEIN_LENGTH_DIST_DIR,
+        max_length=MAX_LENGTH
+    )
     print("Protein length distribution analysis completed.")
-
-    # Data Analysis for Signal Peptide Length
+    
+    # Data Analysis: Signal Peptide Length Distribution
     print("\nAnalyzing signal peptide length distribution:")
-    sp_figures_output_dir = os.path.join('figures', 'signal_peptide_length_dist')
-    analyze_signal_peptide_length_distribution(SPLIT_DIR, sp_figures_output_dir, max_length=None)
+    analyze_signal_peptide_length_distribution(
+        split_dir=SPLIT_DIR,
+        output_dir=SIGNAL_PEPTIDE_LENGTH_DIST_DIR,
+        max_length=None
+    )
     print("Signal peptide length distribution analysis completed.")
-
+    
     # Comparative Amino Acid Composition Analysis
     print("\nComparing amino acid composition of SP sequences:")
-    aa_comp_output_dir = os.path.join('figures', 'comparative_aa_composition')
-    compare_amino_acid_composition(SPLIT_DIR, aa_comp_output_dir)
+    compare_amino_acid_composition(
+        split_dir=SPLIT_DIR,
+        output_dir=COMPARATIVE_AA_COMPOSITION_DIR
+    )
     print("Amino acid composition comparison completed.")
-
+    
     # Taxonomic Classification Analysis
     print("\nAnalyzing taxonomic classification:")
-    taxonomic_output_dir = os.path.join('figures', 'taxonomic_classification')
-    plot_taxonomic_classification(SPLIT_DIR, taxonomic_output_dir)
+    plot_taxonomic_classification(
+        split_dir=SPLIT_DIR,
+        output_dir=TAXONOMIC_CLASSIFICATION_DIR
+    )
     print("Taxonomic classification analysis completed.")
     
     # Scientific Name Classification Analysis
     print("\nAnalyzing scientific name classification:")
-    scientific_name_output_dir = os.path.join('figures', 'scientific_name')
-    plot_scientific_name_classification(SPLIT_DIR, scientific_name_output_dir, num_classifications=7)
+    plot_scientific_name_classification(
+        split_dir=SPLIT_DIR,
+        output_dir=SCIENTIFIC_NAME_CLASSIFICATION_DIR,
+        num_classifications=7
+    )
     print("Scientific name classification analysis completed.")
-
+    
     # Extraction of Cleavage Site Sequences
     print("\nExtracting cleavage site sequences:")
-    msa_output_dir = os.path.join('data', 'cleavage_site_seqs')
-    extract_cleavage_site_sequences(SPLIT_DIR, msa_output_dir)
+    extract_cleavage_site_sequences(
+        split_dir=SPLIT_DIR,
+        output_dir=CLEAVAGE_SITE_SEQS_DIR
+    )
     print("Cleavage site sequence extraction completed.")
-
-
+    
     # Von Heijne Analysis
     print("\nPerforming Von Heijne analysis:")
-    von_heijne_output_dir = os.path.join('data', 'vonHeijne_results')
     perform_vonHeijne_analysis(
-        cleavage_site_seqs_dir=os.path.join('data', 'cleavage_site_seqs', 'train'),
-        splitted_data_dir=os.path.join('data', 'splited_data'),
-        output_dir=von_heijne_output_dir
+        cleavage_site_seqs_dir=os.path.join(CLEAVAGE_SITE_SEQS_DIR, 'train'),
+        splitted_data_dir=os.path.join(DATA_DIR, 'splited_data'),
+        output_dir=VON_HEIJNE_RESULTS_DIR
     )
     print("Von Heijne analysis completed.")
-
-
+    
     # Von Heijne Benchmark Analysis
     print("\nPerforming Von Heijne benchmark analysis:")
-    von_heijne_benchmark_output_dir = os.path.join('data', 'vonHeijne_results_benchmark')
     perform_vonHeijne_benchmark_analysis(
-        cleavage_site_seqs_file=os.path.join('data', 'cleavage_site_seqs', 'train', 'cleavage_site_sequences_train.fasta'),
-        splitted_data_dir=os.path.join('data', 'splited_data', 'test'),
-        threshold_file=os.path.join('data', 'vonHeijne_results', 'final_threshold.txt'),
-        output_dir=von_heijne_benchmark_output_dir
+        cleavage_site_seqs_file=os.path.join(CLEAVAGE_SITE_SEQS_DIR, 'train', 'cleavage_site_sequences_train.fasta'),
+        splitted_data_dir=os.path.join(DATA_DIR, 'splited_data', 'test'),
+        threshold_file=os.path.join(VON_HEIJNE_RESULTS_DIR, 'final_threshold.txt'),
+        output_dir=VON_HEIJNE_BENCHMARK_RESULTS_DIR
     )
     print("Von Heijne benchmark analysis completed.")
     
+    # Final Logging and Output
     logging.info("Protein data processing completed")
     print(f"\nLog file saved as: {LOG_FILE}")
     
-    # Feature Extraction
+    # Feature Extraction Pipeline
     print("\nExtracting features from sequences:")
     svm_extract_features_pipeline()
     print("Feature extraction completed.")
@@ -183,6 +217,7 @@ def main():
     print("\nPerforming SVM error analysis:")
     perform_svm_error_analysis()
     print("SVM error analysis completed.")
+
 
 if __name__ == "__main__":
     main()
