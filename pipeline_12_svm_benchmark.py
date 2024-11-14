@@ -132,6 +132,25 @@ def perform_svm_benchmark():
     fn_ids_df.to_csv(fn_file, index=False)
     logger.info(f"False Negative IDs saved to {fn_file}")
 
+    # Extract IDs of True Negatives (TN) and False Positives (FP)
+    tn_indices = (y_test == 0) & (y_pred == 0)
+    fp_indices = (y_test == 0) & (y_pred == 1)
+
+    tn_ids = accession_ids[tn_indices]
+    fp_ids = accession_ids[fp_indices]
+
+    # Save TN IDs
+    tn_file = os.path.join(output_dir, 'true_negatives_ids.csv')
+    tn_ids_df = pd.DataFrame({expected_id_column: tn_ids})
+    tn_ids_df.to_csv(tn_file, index=False)
+    logger.info(f"True Negative IDs saved to {tn_file}")
+
+    # Save FP IDs
+    fp_file = os.path.join(output_dir, 'false_positives_ids.csv')
+    fp_ids_df = pd.DataFrame({expected_id_column: fp_ids})
+    fp_ids_df.to_csv(fp_file, index=False)
+    logger.info(f"False Positive IDs saved to {fp_file}")
+
     # Save metrics to a file
     metrics = {
         'MCC': [test_mcc],
