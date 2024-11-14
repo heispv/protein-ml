@@ -80,7 +80,7 @@ MAX_LENGTH = 5000  # Max protein length for the figures
 
 
 # =============================================================================
-# Output Directories for Analyses
+# Output Directories for Von Hijne Analyses
 # =============================================================================
 FIGURES_DIR =  "figures/"
 PROTEIN_LENGTH_DIST_DIR = os.path.join(FIGURES_DIR, 'protein_length_dist')
@@ -89,7 +89,7 @@ COMPARATIVE_AA_COMPOSITION_DIR = os.path.join(FIGURES_DIR, 'comparative_aa_compo
 TAXONOMIC_CLASSIFICATION_DIR = os.path.join(FIGURES_DIR, 'taxonomic_classification')
 SCIENTIFIC_NAME_CLASSIFICATION_DIR = os.path.join(FIGURES_DIR, 'scientific_name')
 
-SCIENTIFIC_NAME_CLASS_NUM = 7 # Number of classification for the Scientific name
+SCIENTIFIC_NAME_CLASS_NUM = 7 # Number of classifications for the Scientific name
 
 
 # =============================================================================
@@ -105,5 +105,42 @@ VON_HEIJNE_RESULTS_DIR = os.path.join(DATA_DIR, 'vonHeijne_results')
 VON_HEIJNE_BENCHMARK_RESULTS_DIR = os.path.join(DATA_DIR, 'vonHeijne_results_benchmark')
 
 
+# =============================================================================
 # Expected ID Column for Data Validation
+# =============================================================================
 EXPECTED_ID_COLUMN = 'accession_id'
+
+
+# =============================================================================
+# Amino Acids Configuration
+# =============================================================================
+STANDARD_AMINO_ACIDS = list('ACDEFGHIKLMNPQRSTVWY')
+
+
+# =============================================================================
+# SWISSPROT Frequencies Configuration
+# =============================================================================
+SWISSPROT_FREQUENCIES = {
+    'A': 0.08, 'R': 0.06, 'N': 0.04, 'D': 0.06,
+    'C': 0.01, 'Q': 0.04, 'E': 0.07, 'G': 0.07,
+    'H': 0.02, 'I': 0.06, 'L': 0.10, 'K': 0.06,
+    'M': 0.02, 'F': 0.04, 'P': 0.05, 'S': 0.07,
+    'T': 0.05, 'W': 0.01, 'Y': 0.03, 'V': 0.07
+}
+
+
+# =============================================================================
+# Plotting Color Palettes Configuration
+# =============================================================================
+AA_COMPOSITION_PALETTE = {
+    'False Negatives': '#1f77b4',    # Blue
+    'True Positives': '#2ca02c',     # Green
+    'Background': '#ff7f0e',         # Orange
+    'Positive Training': '#d62728'    # Red
+}
+
+SEQUENCE_LENGTH_PALETTE = {
+    'False Negatives': '#1f77b4',    # Blue
+    'True Positives': '#2ca02c',     # Green
+    'Positive Training': '#d62728'    # Red
+}
