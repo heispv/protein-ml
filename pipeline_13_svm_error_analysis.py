@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 def perform_svm_error_analysis():
     """
     Performs error analysis on the SVM model's predictions by comparing
-    false negatives and true positives.
+    false negatives, true positives, and positive training data.
     """
     logger.info("Starting SVM error analysis.")
 
@@ -39,7 +39,7 @@ def perform_svm_error_analysis():
         'max_charge_abundance'
     ]
     output_files = [
-        os.path.join(output_dir, 'aa_composition_fn_vs_tp.png'),
+        os.path.join(output_dir, 'aa_composition_comparison.png'),  # Updated from 'aa_composition_fn_vs_tp.png'
         os.path.join(output_dir, 'sequence_length_distribution_combined.png')
     ] + [os.path.join(output_dir, f'{feature}_boxplot_fn_vs_tp.png') for feature in features]
     
@@ -58,6 +58,8 @@ def perform_svm_error_analysis():
     test_features_file = TEST_PROTEIN_FEATURES_FILE  # Not normalized
     pos_fasta_file = POS_FASTA_FILE
     neg_fasta_file = NEG_FASTA_FILE
+    pos_train_fasta_file = os.path.join('data', 'splited_data', 'train', 'pos', 'cluster_results_i30_c40_pos_rep_seq_train.fasta')
+    pos_train_tsv_file = os.path.join('data', 'splited_data', 'train', 'pos', 'cluster_results_i30_c40_pos_rep_seq_train.tsv')
     os.makedirs(output_dir, exist_ok=True)
 
     # Read FN and TP IDs
@@ -117,6 +119,16 @@ def perform_svm_error_analysis():
         logger.error(f"Error reading FASTA files: {e}")
         return
 
+    try:
+        pos_train_sequences = SeqIO.to_dict(SeqIO.parse(pos_train_fasta_file, 'fasta'))
+        logger.info(f"Loaded positive training sequences from {pos_train_fasta_file}")
+    except FileNotFoundError as e:
+        logger.error(f"Positive training FASTA file not found: {e.filename}")
+        return
+    except Exception as e:
+        logger.error(f"Error reading positive training FASTA file: {e}")
+        return
+
     # Combine sequences
     all_sequences = {**pos_sequences, **neg_sequences}
 
@@ -142,6 +154,9 @@ def perform_svm_error_analysis():
     if missing_tp_ids:
         logger.warning(f"{len(missing_tp_ids)} TP accession IDs are missing in sequences.")
 
+    pos_train_sequences_list = list(pos_train_sequences.values())
+    logger.info(f"Number of Positive Training Sequences: {len(pos_train_sequences_list)}")
+
     # Function to get first 22 residues
     def get_first_22_residues(sequences):
         seqs_22 = []
@@ -155,6 +170,7 @@ def perform_svm_error_analysis():
 
     fn_seqs_22 = get_first_22_residues(fn_sequences)
     tp_seqs_22 = get_first_22_residues(tp_sequences)
+    pos_train_seqs_22 = get_first_22_residues(pos_train_sequences_list)
 
     # Compute amino acid composition
     def compute_aa_composition(sequences):
@@ -170,6 +186,7 @@ def perform_svm_error_analysis():
 
     fn_aa_comp = compute_aa_composition(fn_seqs_22)
     tp_aa_comp = compute_aa_composition(tp_seqs_22)
+    pos_train_aa_comp = compute_aa_composition(pos_train_seqs_22)
 
     # Fill missing amino acids
     amino_acids = list('ACDEFGHIKLMNPQRSTVWY')  # Standard amino acids
@@ -181,61 +198,129 @@ def perform_svm_error_analysis():
 
     fn_aa_comp = fill_missing_aa(fn_aa_comp, amino_acids)
     tp_aa_comp = fill_missing_aa(tp_aa_comp, amino_acids)
+    pos_train_aa_comp = fill_missing_aa(pos_train_aa_comp, amino_acids)
+
+    SWISSPROT_FREQ = {
+        'A': 0.08, 'R': 0.06, 'N': 0.04, 'D': 0.06,
+        'C': 0.01, 'Q': 0.04, 'E': 0.07, 'G': 0.07,
+        'H': 0.02, 'I': 0.06, 'L': 0.10, 'K': 0.06,
+        'M': 0.02, 'F': 0.04, 'P': 0.05, 'S': 0.07,
+        'T': 0.05, 'W': 0.01, 'Y': 0.03, 'V': 0.07
+    }
+    # Convert frequencies to percentages
+    background_aa_comp = {aa: freq * 100 for aa, freq in SWISSPROT_FREQ.items()}
+    background_aa_comp = fill_missing_aa(background_aa_comp, amino_acids)
 
     # Create DataFrame for plotting
     data = []
     for aa in amino_acids:
         data.append({'Amino Acid': aa, 'Percentage': fn_aa_comp.get(aa, 0.0), 'Group': 'False Negatives'})
         data.append({'Amino Acid': aa, 'Percentage': tp_aa_comp.get(aa, 0.0), 'Group': 'True Positives'})
+        data.append({'Amino Acid': aa, 'Percentage': background_aa_comp.get(aa, 0.0), 'Group': 'Background'})
+        data.append({'Amino Acid': aa, 'Percentage': pos_train_aa_comp.get(aa, 0.0), 'Group': 'Positive Training'})
     aa_comp_df = pd.DataFrame(data)
 
     if aa_comp_df.empty:
         logger.warning("Amino acid composition DataFrame is empty. Skipping amino acid composition plot.")
     else:
-        # Ensure that 'Group' has the correct categories
-        aa_comp_df['Group'] = aa_comp_df['Group'].astype('category')
+        group_order = ['False Negatives', 'True Positives', 'Background', 'Positive Training']
+        aa_comp_df['Group'] = pd.Categorical(aa_comp_df['Group'], categories=group_order)
 
-        # Plot bar plot
-        sns.set(style='whitegrid')
-        plt.figure(figsize=(12, 6))
-        ax = sns.barplot(x='Amino Acid', y='Percentage', hue='Group', data=aa_comp_df, order=amino_acids)
-        plt.title('Amino Acid Composition of First 22 Residues: FN vs TP')
-        plt.xlabel('Amino Acid')
-        plt.ylabel('Percentage')
+        sns.set_theme(style='whitegrid')
+        plt.figure(figsize=(16, 8))
         
+        # Define custom color palette
+        palette = {
+            'False Negatives': '#1f77b4',          # Blue
+            'True Positives': '#2ca02c',          # Green
+            'Background': '#ff7f0e',               # Orange
+            'Positive Training': '#d62728'         # Red
+        }
+        
+        # Create bar plot with grouped bars
+        ax = sns.barplot(
+            x='Amino Acid',
+            y='Percentage',
+            hue='Group',
+            data=aa_comp_df,
+            order=amino_acids,
+            palette=palette,
+            hue_order=group_order  # Ensure the legend follows the defined order
+        )
+        
+        plt.title('Amino Acid Composition Comparison: FN vs TP vs Background vs PT')
+        plt.xlabel('Amino Acid')
+        plt.ylabel('Percentage (%)')
+        plt.legend(title='Group')
+        
+        # Improve layout
         plt.tight_layout()
-        output_file = os.path.join(output_dir, 'aa_composition_fn_vs_tp.png')
+        
+        output_file = os.path.join(output_dir, 'aa_composition_comparison.png')
         plt.savefig(output_file)
         plt.close()
-        logger.info(f"Saved amino acid composition plot to {output_file}")
+        logger.info(f"Saved amino acid composition comparison plot to {output_file}")
 
     # Task 2: Compare sequence lengths
     fn_lengths = [len(str(seq_record.seq)) for seq_record in fn_sequences]
     tp_lengths = [len(str(seq_record.seq)) for seq_record in tp_sequences]
 
-    if not fn_lengths or not tp_lengths:
-        logger.warning("One of the groups (FN or TP) has no sequences. Skipping sequence length plots.")
+    try:
+        pos_train_df = pd.read_csv(pos_train_tsv_file, sep='\t')
+        pos_train_lengths = pos_train_df['sequence_length'].dropna().astype(int).tolist()
+        logger.info(f"Number of Positive Training Sequence Lengths: {len(pos_train_lengths)}")
+    except FileNotFoundError:
+        logger.error(f"Positive training TSV file not found: {pos_train_tsv_file}")
+        pos_train_lengths = []
+    except Exception as e:
+        logger.error(f"Error reading positive training TSV file: {e}")
+        pos_train_lengths = []
+
+    if pos_train_lengths:
+        length_data = pd.DataFrame({
+            'Sequence Length': fn_lengths + tp_lengths + pos_train_lengths,
+            'Group': ['False Negatives'] * len(fn_lengths) + ['True Positives'] * len(tp_lengths) + ['Positive Training'] * len(pos_train_lengths)
+        })
     else:
         length_data = pd.DataFrame({
             'Sequence Length': fn_lengths + tp_lengths,
             'Group': ['False Negatives'] * len(fn_lengths) + ['True Positives'] * len(tp_lengths)
         })
 
+    if not fn_lengths and not tp_lengths and not pos_train_lengths:
+        logger.warning("No sequence lengths available for any group. Skipping sequence length plots.")
+    else:
         # Ensure 'Group' is categorical
-        length_data['Group'] = length_data['Group'].astype('category')
+        if pos_train_lengths:
+            group_order_length = ['False Negatives', 'True Positives', 'Positive Training']
+        else:
+            group_order_length = ['False Negatives', 'True Positives']
+        
+        length_data['Group'] = pd.Categorical(length_data['Group'], categories=group_order_length)
 
-        # Plot histogram and density plot
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(12, 7))
+        
+        # Define custom color palette for three groups
+        palette_length = {
+            'False Negatives': '#1f77b4',        # Blue
+            'True Positives': '#2ca02c',         # Green
+            'Positive Training': '#d62728'        # Red
+        }
+        
+        # Create histogram with KDE
         ax = sns.histplot(
             data=length_data,
             x='Sequence Length',
             hue='Group',
-            bins=30,
+            bins=50,
             kde=True,
             stat='density',
-            common_norm=False
-        )
-        plt.title('Protein Sequence Length Distribution: FN vs TP')
+            common_norm=False,
+            palette=palette_length,
+            hue_order=group_order_length  # Ensure the legend follows the defined order
+)
+        
+        plt.title('Protein Sequence Length Distribution: FN vs TP vs Positive Training')
         plt.xlabel('Sequence Length')
         plt.ylabel('Density')
         plt.tight_layout()
