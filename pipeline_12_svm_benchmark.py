@@ -173,13 +173,62 @@ def perform_svm_benchmark():
     fp_ids_df.to_csv(fp_file, index=False)
     logger.info(f"False Positive IDs saved to {fp_file}")
 
+    # Define paths to additional files
+    false_positives_file = fp_file  # 'false_positives_ids.csv'
+    true_negatives_file = tn_file    # 'true_negatives_ids.csv'
+    neg_filtered_proteins_file = os.path.join('data', 'fetched_data', 'neg_filtered_proteins.tsv')
+
+    # Check if neg_filtered_proteins.tsv exists
+    if not os.path.exists(neg_filtered_proteins_file):
+        logger.error(f"Neg filtered proteins file not found: {neg_filtered_proteins_file}")
+        return
+
+    # Load neg_filtered_proteins.tsv
+    neg_filtered_df = pd.read_csv(neg_filtered_proteins_file, sep='\t')
+    logger.info(f"Loaded neg filtered proteins from {neg_filtered_proteins_file}")
+
+    # Merge FP IDs with neg_filtered_df to get 'tm_helix' status
+    fp_tm_df = pd.merge(fp_ids_df, neg_filtered_df[['primary_accession', 'tm_helix']], 
+                        left_on=expected_id_column, right_on='primary_accession', how='left')
+    if fp_tm_df['tm_helix'].isnull().any():
+        missing_ids = fp_tm_df[fp_tm_df['tm_helix'].isnull()][expected_id_column].tolist()
+        logger.warning(f"The following FP IDs were not found in neg_filtered_proteins.tsv: {missing_ids}")
+
+    # Merge TN IDs with neg_filtered_df to get 'tm_helix' status
+    tn_tm_df = pd.merge(tn_ids_df, neg_filtered_df[['primary_accession', 'tm_helix']], 
+                        left_on=expected_id_column, right_on='primary_accession', how='left')
+    if tn_tm_df['tm_helix'].isnull().any():
+        missing_ids = tn_tm_df[tn_tm_df['tm_helix'].isnull()][expected_id_column].tolist()
+        logger.warning(f"The following TN IDs were not found in neg_filtered_proteins.tsv: {missing_ids}")
+
+    # Overall FPR
+    total_fp = len(fp_ids_df)
+    total_tn = len(tn_ids_df)
+    overall_fpr = total_fp / (total_fp + total_tn) if (total_fp + total_tn) > 0 else 0
+    logger.info(f"Overall False Positive Rate (FPR): {overall_fpr:.4f}")
+
+    # FPR for Transmembrane Proteins
+    fp_tm = fp_tm_df['tm_helix'].sum()
+    tn_tm = tn_tm_df['tm_helix'].sum()
+    fpr_tm = fp_tm / (fp_tm + tn_tm) if (fp_tm + tn_tm) > 0 else 0
+    logger.info(f"False Positive Rate for Transmembrane Proteins (FPR_TM): {fpr_tm:.4f}")
+
+    # FPR for Non-Transmembrane Proteins
+    fp_non_tm = total_fp - fp_tm
+    tn_non_tm = total_tn - tn_tm
+    fpr_non_tm = fp_non_tm / (fp_non_tm + tn_non_tm) if (fp_non_tm + tn_non_tm) > 0 else 0
+    logger.info(f"False Positive Rate for Non-Transmembrane Proteins (FPR_Non_TM): {fpr_non_tm:.4f}")
+
     # Save metrics to a file
     metrics = {
         'MCC': [test_mcc],
         'F1_Score': [test_f1],
         'Precision': [test_precision],
         'Recall': [test_recall],
-        'Accuracy': [test_accuracy]
+        'Accuracy': [test_accuracy],
+        'Overall_FPR': [overall_fpr],
+        'FPR_Transmembrane_Proteins': [fpr_tm],
+        'FPR_Non_Transmembrane_Proteins': [fpr_non_tm]
     }
     metrics_df = pd.DataFrame(metrics)
     metrics_file = os.path.join(output_dir, 'benchmark_metrics.csv')
