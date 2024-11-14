@@ -272,6 +272,27 @@ def perform_svm_error_analysis():
         logger.error(f"Error reading positive training TSV file: {e}")
         pos_train_lengths = []
 
+    max_length = 3500  # Define the maximum sequence length
+
+    # Filter False Negatives lengths
+    original_fn_count = len(fn_lengths)
+    fn_lengths = [length for length in fn_lengths if length <= max_length]
+    filtered_fn_count = len(fn_lengths)
+    logger.info(f"Filtered False Negatives: {original_fn_count - filtered_fn_count} sequences removed (>{max_length} residues)")
+
+    # Filter True Positives lengths
+    original_tp_count = len(tp_lengths)
+    tp_lengths = [length for length in tp_lengths if length <= max_length]
+    filtered_tp_count = len(tp_lengths)
+    logger.info(f"Filtered True Positives: {original_tp_count - filtered_tp_count} sequences removed (>{max_length} residues)")
+
+    # Filter Positive Training lengths if available
+    if pos_train_lengths:
+        original_pt_count = len(pos_train_lengths)
+        pos_train_lengths = [length for length in pos_train_lengths if length <= max_length]
+        filtered_pt_count = len(pos_train_lengths)
+        logger.info(f"Filtered Positive Training: {original_pt_count - filtered_pt_count} sequences removed (>{max_length} residues)")
+
     if pos_train_lengths:
         length_data = pd.DataFrame({
             'Sequence Length': fn_lengths + tp_lengths + pos_train_lengths,
@@ -304,7 +325,7 @@ def perform_svm_error_analysis():
             data=length_data,
             x='Sequence Length',
             hue='Group',
-            bins=50,
+            bins=35,
             kde=True,
             stat='density',
             common_norm=False,
@@ -315,6 +336,7 @@ def perform_svm_error_analysis():
         plt.title('Protein Sequence Length Distribution: FN vs TP vs Positive Training')
         plt.xlabel('Sequence Length')
         plt.ylabel('Density')
+        plt.xlim(0, max_length)
         plt.tight_layout()
         output_file = os.path.join(output_dir, 'sequence_length_distribution_combined.png')
         plt.savefig(output_file)
