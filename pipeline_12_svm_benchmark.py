@@ -174,8 +174,6 @@ def perform_svm_benchmark():
     logger.info(f"False Positive IDs saved to {fp_file}")
 
     # Define paths to additional files
-    false_positives_file = fp_file  # 'false_positives_ids.csv'
-    true_negatives_file = tn_file    # 'true_negatives_ids.csv'
     neg_filtered_proteins_file = os.path.join('data', 'fetched_data', 'neg_filtered_proteins.tsv')
 
     # Check if neg_filtered_proteins.tsv exists
