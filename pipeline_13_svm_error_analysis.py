@@ -8,6 +8,7 @@ import seaborn as sns
 from Bio import SeqIO
 from collections import Counter
 import numpy as np
+import random
 from config import (
     EXPECTED_ID_COLUMN,
     TEST_PROTEIN_FEATURES_FILE,
@@ -23,6 +24,11 @@ from config import (
     AA_COMPOSITION_PALETTE,
     SEQUENCE_LENGTH_PALETTE
 )
+
+# Set random seeds for reproducibility
+RANDOM_SEED = 42
+random.seed(RANDOM_SEED)
+np.random.seed(RANDOM_SEED)
 
 # Initialize logging (ensure LOG_FILE is defined in config.py if used)
 logger = logging.getLogger(__name__)
@@ -81,7 +87,7 @@ def perform_svm_error_analysis():
         logger.error(f"Error reading FN/TP IDs: {e}")
         return
 
-    id_column = EXPECTED_ID_COLUMN  # Ensure this matches your CSV files
+    id_column = EXPECTED_ID_COLUMN
     if id_column not in fn_ids_df.columns or id_column not in tp_ids_df.columns:
         available_fn_cols = ', '.join(fn_ids_df.columns)
         available_tp_cols = ', '.join(tp_ids_df.columns)
@@ -92,8 +98,8 @@ def perform_svm_error_analysis():
         )
         return
 
-    fn_ids = fn_ids_df[id_column].dropna().astype(str).tolist()
-    tp_ids = tp_ids_df[id_column].dropna().astype(str).tolist()
+    fn_ids = sorted(fn_ids_df[id_column].dropna().astype(str).tolist())
+    tp_ids = sorted(tp_ids_df[id_column].dropna().astype(str).tolist())
 
     logger.info(f"Number of False Negatives (FN): {len(fn_ids)}")
     logger.info(f"Number of True Positives (TP): {len(tp_ids)}")
@@ -216,15 +222,15 @@ def perform_svm_error_analysis():
     data = []
     for aa in amino_acids:
         data.append({'Amino Acid': aa, 'Percentage': fn_aa_comp.get(aa, 0.0), 'Group': 'False Negatives'})
-        data.append({'Amino Acid': aa, 'Percentage': tp_aa_comp.get(aa, 0.0), 'Group': 'True Positives'})
         data.append({'Amino Acid': aa, 'Percentage': background_aa_comp.get(aa, 0.0), 'Group': 'Background'})
+        data.append({'Amino Acid': aa, 'Percentage': tp_aa_comp.get(aa, 0.0), 'Group': 'True Positives'})
         data.append({'Amino Acid': aa, 'Percentage': pos_train_aa_comp.get(aa, 0.0), 'Group': 'Positive Training'})
     aa_comp_df = pd.DataFrame(data)
 
     if aa_comp_df.empty:
         logger.warning("Amino acid composition DataFrame is empty. Skipping amino acid composition plot.")
     else:
-        group_order = ['False Negatives', 'True Positives', 'Background', 'Positive Training']
+        group_order = ['False Negatives', 'Background', 'True Positives', 'Positive Training']
         aa_comp_df['Group'] = pd.Categorical(aa_comp_df['Group'], categories=group_order)
 
         sns.set_theme(style='whitegrid')
@@ -330,7 +336,7 @@ def perform_svm_error_analysis():
             stat='density',
             common_norm=False,
             palette=palette_length,
-            hue_order=group_order_length  # Ensure the legend follows the defined order
+            hue_order=group_order_length
         )
         
         plt.title('Protein Sequence Length Distribution: FN vs TP vs Positive Training')
