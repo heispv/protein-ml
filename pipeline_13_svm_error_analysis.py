@@ -10,13 +10,21 @@ from collections import Counter
 import numpy as np
 from config import (
     EXPECTED_ID_COLUMN,
-    SVM_BENCHMARK_DIR,
     TEST_PROTEIN_FEATURES_FILE,
     POS_FASTA_FILE,
     NEG_FASTA_FILE,
     ERROR_ANALYSIS_OUTPUT_DIR,
+    FALSE_NEGATIVES_IDS_FILE,
+    TRUE_POSITIVES_IDS_FILE,
+    SPLIT_DIR,
+    MMSEQS_FILE_PREFIX,
+    STANDARD_AMINO_ACIDS,
+    SWISSPROT_FREQUENCIES,
+    AA_COMPOSITION_PALETTE,
+    SEQUENCE_LENGTH_PALETTE
 )
 
+# Initialize logging (ensure LOG_FILE is defined in config.py if used)
 logger = logging.getLogger(__name__)
 
 def perform_svm_error_analysis():
@@ -52,14 +60,14 @@ def perform_svm_error_analysis():
         logger.info("One or more error analysis output files are missing. Proceeding with SVM error analysis.")
         print("One or more error analysis output files are missing. Proceeding with SVM error analysis.")
 
-    # Define paths
-    fn_ids_file = os.path.join(SVM_BENCHMARK_DIR, 'false_negatives_ids.csv')
-    tp_ids_file = os.path.join(SVM_BENCHMARK_DIR, 'true_positives_ids.csv')
+    # Define paths using config.py constants
+    fn_ids_file = FALSE_NEGATIVES_IDS_FILE
+    tp_ids_file = TRUE_POSITIVES_IDS_FILE
     test_features_file = TEST_PROTEIN_FEATURES_FILE  # Not normalized
     pos_fasta_file = POS_FASTA_FILE
     neg_fasta_file = NEG_FASTA_FILE
-    pos_train_fasta_file = os.path.join('data', 'splited_data', 'train', 'pos', 'cluster_results_i30_c40_pos_rep_seq_train.fasta')
-    pos_train_tsv_file = os.path.join('data', 'splited_data', 'train', 'pos', 'cluster_results_i30_c40_pos_rep_seq_train.tsv')
+    pos_train_fasta_file = os.path.join(SPLIT_DIR, 'train', 'pos', f'{MMSEQS_FILE_PREFIX}_pos_rep_seq_train.fasta')
+    pos_train_tsv_file = os.path.join(SPLIT_DIR, 'train', 'pos', f'{MMSEQS_FILE_PREFIX}_pos_rep_seq_train.tsv')
     os.makedirs(output_dir, exist_ok=True)
 
     # Read FN and TP IDs
@@ -189,7 +197,7 @@ def perform_svm_error_analysis():
     pos_train_aa_comp = compute_aa_composition(pos_train_seqs_22)
 
     # Fill missing amino acids
-    amino_acids = list('ACDEFGHIKLMNPQRSTVWY')  # Standard amino acids
+    amino_acids = STANDARD_AMINO_ACIDS  # Replaced hard-coded list
 
     def fill_missing_aa(comp_dict, amino_acids):
         for aa in amino_acids:
@@ -200,15 +208,8 @@ def perform_svm_error_analysis():
     tp_aa_comp = fill_missing_aa(tp_aa_comp, amino_acids)
     pos_train_aa_comp = fill_missing_aa(pos_train_aa_comp, amino_acids)
 
-    SWISSPROT_FREQ = {
-        'A': 0.08, 'R': 0.06, 'N': 0.04, 'D': 0.06,
-        'C': 0.01, 'Q': 0.04, 'E': 0.07, 'G': 0.07,
-        'H': 0.02, 'I': 0.06, 'L': 0.10, 'K': 0.06,
-        'M': 0.02, 'F': 0.04, 'P': 0.05, 'S': 0.07,
-        'T': 0.05, 'W': 0.01, 'Y': 0.03, 'V': 0.07
-    }
-    # Convert frequencies to percentages
-    background_aa_comp = {aa: freq * 100 for aa, freq in SWISSPROT_FREQ.items()}
+    # Background amino acid composition
+    background_aa_comp = {aa: freq * 100 for aa, freq in SWISSPROT_FREQUENCIES.items()}
     background_aa_comp = fill_missing_aa(background_aa_comp, amino_acids)
 
     # Create DataFrame for plotting
@@ -229,13 +230,8 @@ def perform_svm_error_analysis():
         sns.set_theme(style='whitegrid')
         plt.figure(figsize=(16, 8))
         
-        # Define custom color palette
-        palette = {
-            'False Negatives': '#1f77b4',          # Blue
-            'True Positives': '#2ca02c',          # Green
-            'Background': '#ff7f0e',               # Orange
-            'Positive Training': '#d62728'         # Red
-        }
+        # Use color palette from config.py
+        palette = AA_COMPOSITION_PALETTE
         
         # Create bar plot with grouped bars
         ax = sns.barplot(
@@ -300,12 +296,8 @@ def perform_svm_error_analysis():
 
         plt.figure(figsize=(12, 7))
         
-        # Define custom color palette for three groups
-        palette_length = {
-            'False Negatives': '#1f77b4',        # Blue
-            'True Positives': '#2ca02c',         # Green
-            'Positive Training': '#d62728'        # Red
-        }
+        # Use color palette from config.py
+        palette_length = SEQUENCE_LENGTH_PALETTE
         
         # Create histogram with KDE
         ax = sns.histplot(
@@ -318,7 +310,7 @@ def perform_svm_error_analysis():
             common_norm=False,
             palette=palette_length,
             hue_order=group_order_length  # Ensure the legend follows the defined order
-)
+        )
         
         plt.title('Protein Sequence Length Distribution: FN vs TP vs Positive Training')
         plt.xlabel('Sequence Length')
