@@ -133,9 +133,9 @@ SWISSPROT_FREQUENCIES = {
 # Plotting Color Palettes Configuration
 # =============================================================================
 AA_COMPOSITION_PALETTE = {
-    'False Negatives': '#1f77b4',    # Blue
-    'True Positives': '#2ca02c',     # Green
-    'Background': '#ff7f0e',         # Orange
+    'False Negatives': '#1f77b4',     # Blue
+    'True Positives': '#ff7f0e',      # Orange
+    'Background': '#2ca02c',          # Green
     'Positive Training': '#d62728'    # Red
 }
 
