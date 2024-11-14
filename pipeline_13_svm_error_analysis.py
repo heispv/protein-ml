@@ -26,13 +26,38 @@ def perform_svm_error_analysis():
     """
     logger.info("Starting SVM error analysis.")
 
+    # Define the list of output files to check
+    output_dir = ERROR_ANALYSIS_OUTPUT_DIR
+    features = [
+        'max_transmembrane_propensity',
+        'avg_hydrophobicity',
+        'avg_transmembrane_propensity',
+        'max_hydrophobicity',
+        'pos_max_charge_abundance',
+        'avg_alpha_propensity',
+        'max_alpha_propensity',
+        'max_charge_abundance'
+    ]
+    output_files = [
+        os.path.join(output_dir, 'aa_composition_fn_vs_tp.png'),
+        os.path.join(output_dir, 'sequence_length_distribution_combined.png')
+    ] + [os.path.join(output_dir, f'{feature}_boxplot_fn_vs_tp.png') for feature in features]
+    
+    # Check if all output files exist
+    if all(os.path.exists(file) for file in output_files):
+        logger.info("All error analysis output files already exist. Skipping SVM error analysis.")
+        print("All error analysis output files already exist. Skipping SVM error analysis.")
+        return
+    else:
+        logger.info("One or more error analysis output files are missing. Proceeding with SVM error analysis.")
+        print("One or more error analysis output files are missing. Proceeding with SVM error analysis.")
+
     # Define paths
     fn_ids_file = os.path.join(SVM_BENCHMARK_DIR, 'false_negatives_ids.csv')
     tp_ids_file = os.path.join(SVM_BENCHMARK_DIR, 'true_positives_ids.csv')
     test_features_file = TEST_PROTEIN_FEATURES_FILE  # Not normalized
     pos_fasta_file = POS_FASTA_FILE
     neg_fasta_file = NEG_FASTA_FILE
-    output_dir = ERROR_ANALYSIS_OUTPUT_DIR
     os.makedirs(output_dir, exist_ok=True)
 
     # Read FN and TP IDs

@@ -16,6 +16,21 @@ def perform_feature_selection():
     """
     logger.info("Starting feature selection pipeline.")
     
+    # Define the list of output files to check
+    output_files = [
+        os.path.join(SELECTED_FEATURES_DIR, f'fold_{i + 1}_feature_importances.csv') for i in range(NUM_FOLDS)
+    ]
+    output_files.append(os.path.join(SELECTED_FEATURES_DIR, 'final_top_20_features.csv'))
+    
+    # Check if all output files exist
+    if all(os.path.exists(file) for file in output_files):
+        logger.info("All feature selection output files already exist. Skipping feature selection.")
+        print("All feature selection output files already exist. Skipping feature selection.")
+        return
+    else:
+        logger.info("One or more feature selection output files are missing. Proceeding with feature selection.")
+        print("One or more feature selection output files are missing. Proceeding with feature selection.")
+    
     # Set random seed for reproducibility
     np.random.seed(RANDOM_SEED)
 

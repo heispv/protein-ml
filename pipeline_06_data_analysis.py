@@ -20,6 +20,21 @@ def analyze_protein_length_distribution(split_dir, output_dir, max_length=None):
                                     this length will be filtered out.
     """
     logging.info("Starting protein length distribution analysis.")
+
+    sets = ['train', 'test']
+    data_types = ['pos', 'neg']
+    expected_output_files = [
+        os.path.join(output_dir, f'protein_length_distribution_{set_type}.png') for set_type in sets
+    ]
+
+    if all(os.path.exists(file) for file in expected_output_files):
+        logging.info("All protein length distribution plots already exist. Skipping analysis.")
+        print("All protein length distribution plots already exist. Skipping analysis.")
+        return
+    else:
+        logging.info("One or more protein length distribution plots are missing. Proceeding with analysis.")
+        print("One or more protein length distribution plots are missing. Proceeding with analysis.")
+
     sets = ['train', 'test']
     data_types = ['pos', 'neg']
 
@@ -100,6 +115,20 @@ def analyze_signal_peptide_length_distribution(split_dir, output_dir, max_length
                                     this length will be filtered out.
     """
     logging.info("Starting signal peptide length distribution analysis.")
+
+    sets = ['train', 'test']
+    expected_output_files = [
+        os.path.join(output_dir, f'sp_length_distribution_{set_type}.png') for set_type in sets
+    ]
+
+    if all(os.path.exists(file) for file in expected_output_files):
+        logging.info("All signal peptide length distribution plots already exist. Skipping analysis.")
+        print("All signal peptide length distribution plots already exist. Skipping analysis.")
+        return
+    else:
+        logging.info("One or more signal peptide length distribution plots are missing. Proceeding with analysis.")
+        print("One or more signal peptide length distribution plots are missing. Proceeding with analysis.")
+
     sets = ['train', 'test']
     data_type = 'pos'  # Only positive data has 'ps_length'
 
@@ -115,7 +144,7 @@ def analyze_signal_peptide_length_distribution(split_dir, output_dir, max_length
             continue
         tsv_file_path = os.path.join(tsv_dir, tsv_files[0])
 
-        # Read the tsv file
+        # Read the .tsv file
         df = pd.read_csv(tsv_file_path, sep='\t')
         if 'ps_length' not in df.columns:
             logging.warning(f"'ps_length' column not found in {tsv_file_path}")
@@ -141,7 +170,7 @@ def analyze_signal_peptide_length_distribution(split_dir, output_dir, max_length
         data = pd.DataFrame({'ps_length': ps_lengths})
 
         # Plotting
-        sns.set(style="whitegrid")
+        sns.set_theme(style="whitegrid")
         plt.figure(figsize=(10, 6))
 
         # Combined Histogram and Density Plot
@@ -168,6 +197,20 @@ def compare_amino_acid_composition(split_dir, output_dir):
         output_dir (str): Path to the directory where the plots will be saved.
     """
     logging.info("Starting comparative amino acid composition analysis.")
+
+    sets = ['train', 'test']
+    expected_output_files = [
+        os.path.join(output_dir, f'aa_composition_comparison_{set_type}.png') for set_type in sets
+    ]
+
+    if all(os.path.exists(file) for file in expected_output_files):
+        logging.info("All amino acid composition comparison plots already exist. Skipping analysis.")
+        print("All amino acid composition comparison plots already exist. Skipping analysis.")
+        return
+    else:
+        logging.info("One or more amino acid composition comparison plots are missing. Proceeding with analysis.")
+        print("One or more amino acid composition comparison plots are missing. Proceeding with analysis.")
+
     sets = ['train', 'test']
     data_type = 'pos'  # Only positive data has SP sequences
 
@@ -231,7 +274,7 @@ def compare_amino_acid_composition(split_dir, output_dir):
                 sp_sequences.append(sp_seq)
             else:
                 logging.warning(f"Primary accession {primary_accession} not found in fasta file.")
-
+        
         if not sp_sequences:
             logging.warning(f"No SP sequences found for {set_type} set.")
             continue
@@ -263,7 +306,7 @@ def compare_amino_acid_composition(split_dir, output_dir):
         })
 
         # Plotting
-        sns.set(style="whitegrid")
+        sns.set_theme(style="whitegrid")
         plt.figure(figsize=(12, 6))
 
         # Define the color palette
@@ -288,7 +331,7 @@ def compare_amino_acid_composition(split_dir, output_dir):
         logging.info(f"Saved amino acid composition comparison plot to {output_path}")
 
     logging.info("Comparative amino acid composition analysis completed.")
-    
+
 def plot_taxonomic_classification(split_dir, output_dir, num_classifications=5):
     """
     Plots the taxonomic classification distribution as pie charts for training and test sets,
@@ -300,6 +343,20 @@ def plot_taxonomic_classification(split_dir, output_dir, num_classifications=5):
         num_classifications (int): Number of top classifications to display in the pie chart.
     """
     logging.info("Starting taxonomic classification analysis.")
+
+    sets = ['train', 'test']
+    expected_output_files = [
+        os.path.join(output_dir, f'taxonomic_classification_{set_type}.png') for set_type in sets
+    ]
+
+    if all(os.path.exists(file) for file in expected_output_files):
+        logging.info("All taxonomic classification pie charts already exist. Skipping analysis.")
+        print("All taxonomic classification pie charts already exist. Skipping analysis.")
+        return
+    else:
+        logging.info("One or more taxonomic classification pie charts are missing. Proceeding with analysis.")
+        print("One or more taxonomic classification pie charts are missing. Proceeding with analysis.")
+
     sets = ['train', 'test']
     data_types = ['pos', 'neg']
 
@@ -317,7 +374,7 @@ def plot_taxonomic_classification(split_dir, output_dir, num_classifications=5):
                 continue
             tsv_file_path = os.path.join(tsv_dir, tsv_files[0])
 
-            # Read the tsv file
+            # Read the .tsv file
             df = pd.read_csv(tsv_file_path, sep='\t')
             if 'lineage' not in df.columns:
                 logging.warning(f"'lineage' column not found in {tsv_file_path}")
@@ -362,7 +419,7 @@ def plot_taxonomic_classification(split_dir, output_dir, num_classifications=5):
         logging.info(f"Saved taxonomic classification pie chart to {output_path}")
 
     logging.info("Taxonomic classification analysis completed.")
-    
+
 def plot_scientific_name_classification(split_dir, output_dir, num_classifications=5):
     """
     Plots the scientific name classification distribution as pie charts for training and test sets,
@@ -374,6 +431,20 @@ def plot_scientific_name_classification(split_dir, output_dir, num_classificatio
         num_classifications (int): Number of top scientific names to display in the pie chart.
     """
     logging.info("Starting scientific name classification analysis.")
+
+    sets = ['train', 'test']
+    expected_output_files = [
+        os.path.join(output_dir, f'scientific_name_classification_{set_type}.png') for set_type in sets
+    ]
+
+    if all(os.path.exists(file) for file in expected_output_files):
+        logging.info("All scientific name classification pie charts already exist. Skipping analysis.")
+        print("All scientific name classification pie charts already exist. Skipping analysis.")
+        return
+    else:
+        logging.info("One or more scientific name classification pie charts are missing. Proceeding with analysis.")
+        print("One or more scientific name classification pie charts are missing. Proceeding with analysis.")
+
     sets = ['train', 'test']
     data_types = ['pos', 'neg']
 
@@ -436,7 +507,7 @@ def plot_scientific_name_classification(split_dir, output_dir, num_classificatio
         logging.info(f"Saved scientific name classification pie chart to {output_path}")
 
     logging.info("Scientific name classification analysis completed.")
-    
+
 def extract_cleavage_site_sequences(split_dir, output_dir):
     """
     Extracts cleavage site sequences based on ps_length.
@@ -448,6 +519,35 @@ def extract_cleavage_site_sequences(split_dir, output_dir):
         output_dir (str): Path to the directory where the extracted sequences will be saved.
     """
     logging.info("Starting cleavage site sequence extraction.")
+
+    sets = ['train', 'test']
+    # Collect all expected output FASTA files based on the directory structure
+    expected_output_files = []
+    for set_type in sets:
+        set_dir = os.path.join(split_dir, set_type)
+        for root, dirs, files in os.walk(set_dir):
+            if 'pos' in dirs:
+                pos_dir = os.path.join(root, 'pos')
+                # Determine the relative path to set_dir
+                rel_path = os.path.relpath(pos_dir, set_dir)
+                # Construct the corresponding output directory
+                if rel_path == 'pos':
+                    output_subdir = os.path.join(output_dir, set_type)
+                else:
+                    output_subdir = os.path.join(output_dir, set_type, rel_path)
+                # Define expected output file names
+                output_filename = f'cleavage_site_sequences_{set_type}.fasta' if rel_path == 'pos' else f'cleavage_site_sequences_{set_type}_{rel_path.replace(os.sep, "_")}.fasta'
+                output_file = os.path.join(output_subdir, output_filename)
+                expected_output_files.append(output_file)
+
+    if all(os.path.exists(file) for file in expected_output_files):
+        logging.info("All cleavage site sequence FASTA files already exist. Skipping extraction.")
+        print("All cleavage site sequence FASTA files already exist. Skipping extraction.")
+        return
+    else:
+        logging.info("One or more cleavage site sequence FASTA files are missing. Proceeding with extraction.")
+        print("One or more cleavage site sequence FASTA files are missing. Proceeding with extraction.")
+
     sets = ['train', 'test']
 
     # Ensure the output directory exists
@@ -488,6 +588,23 @@ def extract_cleavage_site_sequences(split_dir, output_dir):
                     output_subdir = os.path.join(output_dir, set_type, rel_path)
                 os.makedirs(output_subdir, exist_ok=True)
                 logging.info(f"Output subdirectory: {output_subdir}")
+
+                # Define expected output FASTA file path
+                if rel_path == 'pos':
+                    output_filename = f'cleavage_site_sequences_{set_type}.fasta'
+                else:
+                    # Replace os.sep with underscore to create a valid filename
+                    fold_number = rel_path.replace(os.sep, '_')
+                    output_filename = f'cleavage_site_sequences_{set_type}_{fold_number}.fasta'
+                output_file = os.path.join(output_subdir, output_filename)
+
+                if os.path.exists(output_file):
+                    logging.info(f"Filtered FASTA file {output_file} already exists. Skipping extraction for this directory.")
+                    print(f"Filtered FASTA file {output_file} already exists. Skipping extraction for this directory.")
+                    continue
+                else:
+                    logging.info(f"Filtered FASTA file {output_file} does not exist. Proceeding with extraction.")
+                    print(f"Filtered FASTA file {output_file} does not exist. Proceeding with extraction.")
 
                 # Read the .tsv file
                 try:
@@ -556,15 +673,6 @@ def extract_cleavage_site_sequences(split_dir, output_dir):
                 if not extracted_sequences:
                     logging.warning(f"No cleavage site sequences extracted for {set_type} set in {pos_dir}.")
                     continue
-
-                # Define output file path
-                if rel_path == 'pos':
-                    output_filename = f'cleavage_site_sequences_{set_type}.fasta'
-                else:
-                    # Replace os.sep with underscore to create a valid filename
-                    fold_number = rel_path.replace(os.sep, '_')
-                    output_filename = f'cleavage_site_sequences_{set_type}_{fold_number}.fasta'
-                output_file = os.path.join(output_subdir, output_filename)
 
                 # Write the extracted sequences to a FASTA file
                 try:

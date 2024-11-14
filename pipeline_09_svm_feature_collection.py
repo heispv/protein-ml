@@ -202,6 +202,25 @@ def svm_extract_features_pipeline():
     """
     logger.info("Starting feature extraction pipeline.")
     
+    # Define the list of output files to check
+    output_files = [
+        os.path.join(FEATURES_DIR, 'feature_means.csv'),
+        os.path.join(FEATURES_DIR, 'feature_stds.csv'),
+        os.path.join(FEATURES_DIR, 'protein_features.csv'),
+        os.path.join(FEATURES_DIR, 'norm_protein_features.csv'),
+        os.path.join(FEATURES_DIR, 'testing', 'test_protein_features.csv'),
+        os.path.join(FEATURES_DIR, 'testing', 'test_norm_protein_features.csv')
+    ]
+    
+    # Check if all output files exist
+    if all(os.path.exists(file) for file in output_files):
+        logger.info("All feature extraction output files already exist. Skipping feature extraction.")
+        print("All feature extraction output files already exist. Skipping feature extraction.")
+        return
+    else:
+        logger.info("One or more feature extraction output files are missing. Proceeding with feature extraction.")
+        print("One or more feature extraction output files are missing. Proceeding with feature extraction.")
+    
     # Define directories
     train_data_dir = os.path.join(SPLIT_DIR, 'train')
     pos_dir = os.path.join(train_data_dir, 'pos')

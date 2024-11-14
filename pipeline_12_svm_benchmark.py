@@ -10,6 +10,7 @@ from sklearn.metrics import (
     recall_score,
     f1_score,
     confusion_matrix,
+    accuracy_score
 )
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -30,6 +31,26 @@ def perform_svm_benchmark():
     """
     logger.info("Starting SVM benchmarking pipeline.")
     
+    # Define the list of output files to check
+    output_dir = os.path.join(RESULTS_DIR, 'svm_benchmark')
+    output_files = [
+        os.path.join(output_dir, 'confusion_matrix.png'),
+        os.path.join(output_dir, 'true_positives_ids.csv'),
+        os.path.join(output_dir, 'false_negatives_ids.csv'),
+        os.path.join(output_dir, 'true_negatives_ids.csv'),
+        os.path.join(output_dir, 'false_positives_ids.csv'),
+        os.path.join(output_dir, 'benchmark_metrics.csv')
+    ]
+    
+    # Check if all output files exist
+    if all(os.path.exists(file) for file in output_files):
+        logger.info("All benchmarking output files already exist. Skipping SVM benchmarking.")
+        print("All benchmarking output files already exist. Skipping SVM benchmarking.")
+        return
+    else:
+        logger.info("One or more benchmarking output files are missing. Proceeding with SVM benchmarking.")
+        print("One or more benchmarking output files are missing. Proceeding with SVM benchmarking.")
+    
     # Set random seed for reproducibility
     np.random.seed(RANDOM_SEED)
 
@@ -37,7 +58,6 @@ def perform_svm_benchmark():
     selected_features_file = os.path.join(SELECTED_FEATURES_DIR, 'final_top_20_features.csv')
     test_data_file = TEST_NORM_PROTEIN_FEATURES_FILE
     model_file = os.path.join(RESULTS_DIR, 'final_svm_model.joblib')
-    output_dir = os.path.join(RESULTS_DIR, 'svm_benchmark')
     os.makedirs(output_dir, exist_ok=True)
 
     # Load selected features
@@ -94,12 +114,14 @@ def perform_svm_benchmark():
     test_f1 = f1_score(y_test, y_pred, zero_division=0)
     test_precision = precision_score(y_test, y_pred, zero_division=0)
     test_recall = recall_score(y_test, y_pred, zero_division=0)
+    test_accuracy = accuracy_score(y_test, y_pred)
 
     logger.info("=== Benchmark Results ===")
     logger.info(f"MCC: {test_mcc:.4f}")
     logger.info(f"F1 Score: {test_f1:.4f}")
     logger.info(f"Precision: {test_precision:.4f}")
     logger.info(f"Recall: {test_recall:.4f}")
+    logger.info(f"Accuracy: {test_accuracy:.4f}")
 
     # Confusion matrix
     cm = confusion_matrix(y_test, y_pred)
@@ -156,7 +178,8 @@ def perform_svm_benchmark():
         'MCC': [test_mcc],
         'F1_Score': [test_f1],
         'Precision': [test_precision],
-        'Recall': [test_recall]
+        'Recall': [test_recall],
+        'Accuracy': [test_accuracy]
     }
     metrics_df = pd.DataFrame(metrics)
     metrics_file = os.path.join(output_dir, 'benchmark_metrics.csv')

@@ -5,7 +5,7 @@ import logging
 import numpy as np
 import pandas as pd
 from sklearn.svm import SVC
-from sklearn.metrics import matthews_corrcoef, precision_score, recall_score
+from sklearn.metrics import matthews_corrcoef, precision_score, recall_score, f1_score, accuracy_score
 from sklearn.model_selection import cross_val_predict
 import joblib  # For saving the trained model
 from config import (
@@ -24,6 +24,22 @@ def perform_svm_hyperparameter_tuning():
     Performs hyperparameter tuning for SVM using cross-validation.
     """
     logger.info("Starting SVM hyperparameter tuning pipeline.")
+    
+    # Define the list of output files to check
+    output_files = [
+        os.path.join(RESULTS_DIR, 'final_svm_model.joblib'),
+        os.path.join(RESULTS_DIR, 'svm_initial_5fold_results.csv'),
+        os.path.join(RESULTS_DIR, 'svm_refined_hyperparameters.csv')
+    ]
+    
+    # Check if all output files exist
+    if all(os.path.exists(file) for file in output_files):
+        logger.info("All hyperparameter tuning output files already exist. Skipping hyperparameter tuning.")
+        print("All hyperparameter tuning output files already exist. Skipping hyperparameter tuning.")
+        return
+    else:
+        logger.info("One or more hyperparameter tuning output files are missing. Proceeding with hyperparameter tuning.")
+        print("One or more hyperparameter tuning output files are missing. Proceeding with hyperparameter tuning.")
     
     # Set random seed for reproducibility
     np.random.seed(RANDOM_SEED)
@@ -190,6 +206,14 @@ def perform_svm_hyperparameter_tuning():
     
     logger.info(f"Refined Best C={final_best_C}, gamma={final_best_gamma}, Cross-Validated MCC={final_best_mcc:.4f}")
     
+    # Initialize variables to store additional metrics
+    final_precision = precision_score(y, y_pred, zero_division=0)
+    final_recall = recall_score(y, y_pred, zero_division=0)
+    final_f1 = f1_score(y, y_pred, zero_division=0)
+    final_accuracy = accuracy_score(y, y_pred)
+    
+    logger.info(f"Refined Cross-Validated Precision={final_precision:.4f}, Recall={final_recall:.4f}, F1 Score={final_f1:.4f}, Accuracy={final_accuracy:.4f}")
+    
     # Train final model with refined hyperparameters on the entire dataset
     final_svm = SVC(C=final_best_C, gamma=final_best_gamma, kernel='rbf', class_weight='balanced', random_state=RANDOM_SEED)
     final_svm.fit(X, y)
@@ -208,15 +232,19 @@ def perform_svm_hyperparameter_tuning():
     results_df.to_csv(initial_results_file, index=False)
     logger.info(f"Initial 5-Fold Results saved to {initial_results_file}")
     
-    # Save final refined hyperparameters
+    # Save final refined hyperparameters and additional metrics
     refined_results = {
         'final_best_C': final_best_C,
         'final_best_gamma': final_best_gamma,
-        'final_cross_validated_MCC': final_best_mcc
+        'final_cross_validated_MCC': final_best_mcc,
+        'final_cross_validated_Precision': final_precision,
+        'final_cross_validated_Recall': final_recall,
+        'final_cross_validated_F1_Score': final_f1,
+        'final_cross_validated_Accuracy': final_accuracy
     }
     refined_results_df = pd.DataFrame([refined_results])
     refined_results_file = os.path.join(output_dir, 'svm_refined_hyperparameters.csv')
     refined_results_df.to_csv(refined_results_file, index=False)
-    logger.info(f"Refined Hyperparameters saved to {refined_results_file}")
+    logger.info(f"Refined Hyperparameters and Metrics saved to {refined_results_file}")
     
     logger.info("SVM hyperparameter tuning pipeline completed.")

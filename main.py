@@ -189,10 +189,6 @@ def main():
     )
     print("Von Heijne benchmark analysis completed.")
     
-    # Final Logging and Output
-    logging.info("Protein data processing completed")
-    print(f"\nLog file saved as: {LOG_FILE}")
-    
     # Feature Extraction Pipeline
     print("\nExtracting features from sequences:")
     svm_extract_features_pipeline()
@@ -218,6 +214,9 @@ def main():
     perform_svm_error_analysis()
     print("SVM error analysis completed.")
 
+    # Final Logging and Output
+    logging.info("Protein data processing completed")
+    print(f"\nLog file saved as: {LOG_FILE}")
 
 if __name__ == "__main__":
     main()

@@ -69,6 +69,14 @@ def process_all_fasta_files(fetched_dir, split_dir):
 
                 # Output tsv file path
                 output_tsv_path = os.path.join(root, file.replace('.fasta', '.tsv'))
+                
+                if os.path.exists(output_tsv_path):
+                    logging.info(f"Filtered TSV file {output_tsv_path} already exists. Skipping filtering for this FASTA file.")
+                    print(f"Filtered TSV file {output_tsv_path} already exists. Skipping filtering for this FASTA file.")
+                    continue
+                else:
+                    logging.info(f"Filtered TSV file {output_tsv_path} does not exist. Proceeding with filtering.")
+                    print(f"Filtered TSV file {output_tsv_path} does not exist. Proceeding with filtering.")
 
                 # Filter tsv
                 filter_tsv_by_fasta_ids(fasta_file_path, tsv_file_path, output_tsv_path)
