@@ -1,372 +1,629 @@
-# Protein Data Processing Pipeline
-
-## Overview
-
-This project provides a pipeline for processing protein data from the UniProt database. It automates the fetching, filtering, clustering, splitting, and preparation of protein datasets for machine learning tasks, such as classification or sequence analysis.
-
-The pipeline includes steps for:
-
-- Fetching protein data from the UniProt REST API based on specified queries.
-- Filtering the data to include only relevant proteins.
-- Clustering the proteins using MMseqs2 to reduce redundancy.
-- Splitting the data into training and testing sets.
-- Performing cross-validation splitting.
-- Filtering metadata files (`.tsv`) based on the sequences included in each split.
-
-**Note:** The `data/` and `experiment/` directories are included in the `.gitignore` file and are not pushed to the remote repository. These directories, along with their contents, will be created when you run the pipeline.
-
-## Repository
-
-You can find the project repository on GitHub:
-
-[https://github.com/heispv/protein-ml](https://github.com/heispv/protein-ml)
+# Protein Signal Peptide Prediction Pipeline
 
 ## Table of Contents
 
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
+- [Introduction](#introduction)
+- [Features](#features)
+- [Architecture](#architecture)
 - [Project Structure](#project-structure)
+- [Installation](#installation)
 - [Configuration](#configuration)
 - [Usage](#usage)
-- [Pipeline Steps](#pipeline-steps)
-  - [1. Data Fetching](#1-data-fetching)
-  - [2. Data Filtering](#2-data-filtering)
-  - [3. Data Clustering](#3-data-clustering)
-  - [4. Data Splitting](#4-data-splitting)
-  - [5. Cross-Validation Splitting](#5-cross-validation-splitting)
-  - [6. Filtering Metadata Files](#6-filtering-metadata-files)
-- [Directory Structure](#directory-structure)
-- [Logging](#logging)
-- [Customization](#customization)
-- [Error Handling](#error-handling)
-- [Cleaning Up](#cleaning-up)
+- [Pipeline Overview](#pipeline-overview)
+- [Data Processing](#data-processing)
+- [Feature Extraction and Selection](#feature-extraction-and-selection)
+- [Model Training and Evaluation](#model-training-and-evaluation)
+- [Benchmarking](#benchmarking)
+- [Error Analysis](#error-analysis)
+- [Performance Metrics](#performance-metrics)
+- [Results](#results)
+- [Future Directions](#future-directions)
+- [Dependencies](#dependencies)
 - [Contributing](#contributing)
 - [License](#license)
+- [Contact](#contact)
 
-## Prerequisites
+## Introduction
 
-Before you begin, ensure you have met the following requirements:
+The **Protein Signal Peptide Prediction Pipeline** is a comprehensive bioinformatics tool designed to accurately predict signal peptides (SPs) in protein sequences. Signal peptides are short sequences at the N-terminus of proteins that direct them to the secretory pathway, playing a crucial role in protein localization and function. Accurate prediction of SPs is essential for applications in drug discovery, vaccine development, and recombinant protein production.
 
-- **Python 3.6 or higher** is installed.
-- **pip** package manager is available.
-- The following Python packages are installed:
-  - `requests`
-  - `biopython`
-  - `pandas`
-- **MMseqs2** is installed and available in your system's PATH.
-- Access to the internet to fetch data from the UniProt REST API.
+This pipeline implements and compares two primary approaches for SP prediction:
 
-### Installing Python Packages
+1. **Von Heijne’s Algorithm:** A foundational statistical method utilizing a Position-Specific Weight Matrix (PSWM) to predict cleavage sites based on residue frequency patterns.
+2. **Support Vector Machines (SVMs):** A machine learning model that leverages multidimensional sequence features to enhance prediction accuracy and robustness.
 
-You can install the required Python packages using the following command:
+By integrating traditional statistical methods with advanced machine learning techniques, this pipeline aims to provide superior performance in SP prediction tasks.
 
-```bash
-pip install -r requirements.txt
-```
+## Features
 
-Create a `requirements.txt` file with the following content:
+- **Data Fetching:** Retrieves protein data from UniProtKB/SwissProt based on defined positive and negative queries.
+- **Data Filtering:** Applies stringent criteria to curate a high-quality dataset of experimentally validated SPs and non-SPs.
+- **Clustering:** Utilizes MMseqs2 to reduce dataset redundancy, ensuring diverse and non-redundant sequences.
+- **Data Splitting:** Divides data into training and benchmarking sets with stratified sampling to maintain class balance.
+- **Feature Extraction:** Computes various biochemical and structural properties essential for SP prediction.
+- **Feature Selection:** Employs Random Forests to identify the most informative features for model training.
+- **Model Training:** Implements both von Heijne’s PSWM-based method and SVM classifiers with hyperparameter tuning.
+- **Evaluation & Benchmarking:** Assesses model performance using metrics like Matthews Correlation Coefficient (MCC), Precision, Recall, and F1-score.
+- **Error Analysis:** Identifies common misclassification pitfalls, such as transmembrane helices and atypical SPs.
+- **Docker Support:** Containerizes the entire pipeline for seamless deployment and reproducibility.
 
-```
-requests
-biopython
-pandas
-```
+## Architecture
 
-Alternatively, install them individually:
+The pipeline is modular, consisting of multiple interconnected scripts, each handling a specific stage of the data processing and model training workflow. The primary components include:
 
-```bash
-pip install requests biopython pandas
-```
+- **Data Fetching and Filtering**
+- **Clustering and Data Splitting**
+- **Feature Extraction and Selection**
+- **Model Training and Evaluation**
+- **Benchmarking and Error Analysis**
 
-### Installing MMseqs2
-
-MMseqs2 is a software suite for fast and sensitive protein sequence searching and clustering.
-
-- Download MMseqs2 from the [official website](https://mmseqs.com/).
-- Follow the installation instructions for your operating system.
-- Ensure that the `mmseqs` command is accessible from the command line (i.e., MMseqs2 is in your PATH).
-
-## Installation
-
-Clone this repository to your local machine:
-
-```bash
-git clone https://github.com/heispv/protein-ml.git
-```
-
-Navigate to the project directory:
-
-```bash
-cd protein-ml
-```
-
-Install the required Python packages as described in the [Prerequisites](#prerequisites) section.
+![Pipeline Architecture](docs/pipeline_architecture.png)
 
 ## Project Structure
 
+The project directory is organized as follows:
+
 ```
-protein-ml/
+.
+├── Dockerfile
+├── LICENCE
+├── README.md
+├── __init__.py
 ├── config.py
+├── data
+│   ├── cleavage_site_seqs
+│   │   ├── test
+│   │   │   └── cleavage_site_sequences_test.fasta
+│   │   └── train
+│   │       ├── 1
+│   │       │   └── pos
+│   │       │       └── cleavage_site_sequences_train_1_pos.fasta
+│   │       ├── 2
+│   │       │   └── pos
+│   │       │       └── cleavage_site_sequences_train_2_pos.fasta
+│   │       ├── 3
+│   │       │   └── pos
+│   │       │       └── cleavage_site_sequences_train_3_pos.fasta
+│   │       ├── 4
+│   │       │   └── pos
+│   │       │       └── cleavage_site_sequences_train_4_pos.fasta
+│   │       ├── 5
+│   │       │   └── pos
+│   │       │       └── cleavage_site_sequences_train_5_pos.fasta
+│   │       └── cleavage_site_sequences_train.fasta
+│   ├── clustered_data
+│   │   ├── negative
+│   │   │   ├── cluster_results_i30_c40_neg_all_seqs.fasta
+│   │   │   ├── cluster_results_i30_c40_neg_cluster.tsv
+│   │   │   └── cluster_results_i30_c40_neg_rep_seq.fasta
+│   │   └── positive
+│   │       ├── cluster_results_i30_c40_pos_all_seqs.fasta
+│   │       ├── cluster_results_i30_c40_pos_cluster.tsv
+│   │       └── cluster_results_i30_c40_pos_rep_seq.fasta
+│   ├── features
+│   │   ├── feature_means.csv
+│   │   ├── feature_stds.csv
+│   │   ├── norm_protein_features.csv
+│   │   ├── protein_features.csv
+│   │   ├── selected_features
+│   │   │   ├── final_top_20_features.csv
+│   │   │   ├── fold_1_feature_importances.csv
+│   │   │   ├── fold_2_feature_importances.csv
+│   │   │   ├── fold_3_feature_importances.csv
+│   │   │   ├── fold_4_feature_importances.csv
+│   │   │   └── fold_5_feature_importances.csv
+│   │   └── testing
+│   │       ├── test_norm_protein_features.csv
+│   │       └── test_protein_features.csv
+│   ├── fetched_data
+│   │   ├── neg_filtered_proteins.fasta
+│   │   ├── neg_filtered_proteins.tsv
+│   │   ├── pos_filtered_proteins.fasta
+│   │   └── pos_filtered_proteins.tsv
+│   ├── pipeline_execution.log
+│   ├── results
+│   │   ├── final_svm_model.joblib
+│   │   ├── svm_benchmark
+│   │   │   ├── benchmark_metrics.csv
+│   │   │   ├── confusion_matrix.png
+│   │   │   ├── error_analysis
+│   │   │   │   ├── aa_composition_comparison.png
+│   │   │   │   ├── avg_alpha_propensity_boxplot_fn_vs_tp.png
+│   │   │   │   ├── avg_hydrophobicity_boxplot_fn_vs_tp.png
+│   │   │   │   ├── avg_transmembrane_propensity_boxplot_fn_vs_tp.png
+│   │   │   │   ├── max_alpha_propensity_boxplot_fn_vs_tp.png
+│   │   │   │   ├── max_charge_abundance_boxplot_fn_vs_tp.png
+│   │   │   │   ├── max_hydrophobicity_boxplot_fn_vs_tp.png
+│   │   │   │   ├── max_transmembrane_propensity_boxplot_fn_vs_tp.png
+│   │   │   │   ├── pos_max_charge_abundance_boxplot_fn_vs_tp.png
+│   │   │   │   └── sequence_length_distribution_combined.png
+│   │   │   ├── false_negatives_ids.csv
+│   │   │   ├── false_positives_ids.csv
+│   │   │   ├── true_negatives_ids.csv
+│   │   │   └── true_positives_ids.csv
+│   │   ├── svm_initial_5fold_results.csv
+│   │   └── svm_refined_hyperparameters.csv
+│   ├── splited_data
+│   │   ├── test
+│   │   │   ├── neg
+│   │   │   │   ├── cluster_results_i30_c40_neg_rep_seq_test.fasta
+│   │   │   │   └── cluster_results_i30_c40_neg_rep_seq_test.tsv
+│   │   │   └── pos
+│   │   │       ├── cluster_results_i30_c40_pos_rep_seq_test.fasta
+│   │   │       └── cluster_results_i30_c40_pos_rep_seq_test.tsv
+│   │   └── train
+│   │       ├── 1
+│   │       │   ├── neg
+│   │       │   │   ├── neg_fold_1.fasta
+│   │       │   │   └── neg_fold_1.tsv
+│   │       │   └── pos
+│   │       │       ├── pos_fold_1.fasta
+│   │       │       └── pos_fold_1.tsv
+│   │       ├── 2
+│   │       │   ├── neg
+│   │       │   │   ├── neg_fold_2.fasta
+│   │       │   │   └── neg_fold_2.tsv
+│   │       │   └── pos
+│   │       │       ├── pos_fold_2.fasta
+│   │       │       └── pos_fold_2.tsv
+│   │       ├── 3
+│   │       │   ├── neg
+│   │       │   │   ├── neg_fold_3.fasta
+│   │       │   │   └── neg_fold_3.tsv
+│   │       │   └── pos
+│   │       │       ├── pos_fold_3.fasta
+│   │       │       └── pos_fold_3.tsv
+│   │       ├── 4
+│   │       │   ├── neg
+│   │       │   │   ├── neg_fold_4.fasta
+│   │       │   │   └── neg_fold_4.tsv
+│   │       │   └── pos
+│   │       │       ├── pos_fold_4.fasta
+│   │       │       └── pos_fold_4.tsv
+│   │       ├── 5
+│   │       │   ├── neg
+│   │       │   │   ├── neg_fold_5.fasta
+│   │       │   │   └── neg_fold_5.tsv
+│   │       │   └── pos
+│   │       │       ├── pos_fold_5.fasta
+│   │       │       └── pos_fold_5.tsv
+│   │       ├── neg
+│   │       │   ├── cluster_results_i30_c40_neg_rep_seq_train.fasta
+│   │       │   └── cluster_results_i30_c40_neg_rep_seq_train.tsv
+│   │       └── pos
+│   │           ├── cluster_results_i30_c40_pos_rep_seq_train.fasta
+│   │           └── cluster_results_i30_c40_pos_rep_seq_train.tsv
+│   ├── vonHeijne_results
+│   │   ├── final_threshold.txt
+│   │   ├── individual_thresholds.csv
+│   │   ├── results.csv
+│   │   ├── scoring_matrix_train_folds_1_2_3.csv
+│   │   ├── scoring_matrix_train_folds_2_3_4.csv
+│   │   ├── scoring_matrix_train_folds_3_4_5.csv
+│   │   ├── scoring_matrix_train_folds_4_5_1.csv
+│   │   └── scoring_matrix_train_folds_5_1_2.csv
+│   └── vonHeijne_results_benchmark
+│       ├── benchmark_results.csv
+│       ├── detailed_results.csv
+│       ├── scoring_matrix.csv
+│       ├── von_heijne_fp_id.csv
+│       └── von_heijne_tn_id.csv
 ├── data_classes.py
+├── figures
+│   ├── comparative_aa_composition
+│   │   ├── aa_composition_comparison_test.png
+│   │   └── aa_composition_comparison_train.png
+│   ├── protein_length_dist
+│   │   ├── protein_length_distribution_test.png
+│   │   └── protein_length_distribution_train.png
+│   ├── scientific_name
+│   │   ├── scientific_name_classification_test.png
+│   │   └── scientific_name_classification_train.png
+│   ├── signal_peptide_length_dist
+│   │   ├── sp_length_distribution_test.png
+│   │   └── sp_length_distribution_train.png
+│   ├── taxonomic_classification
+│   │   ├── taxonomic_classification_test.png
+│   │   └── taxonomic_classification_train.png
+│   └── weblogo
+│       ├── logo_test.png
+│       └── logo_train.png
 ├── main.py
 ├── pipeline_01_data_fetcher.py
 ├── pipeline_01_data_filterer.py
 ├── pipeline_02_data_clusterer.py
 ├── pipeline_03_data_splitting.py
-├── pipeline_04_cross_validation.py
+├── pipeline_04_cross_validation_split.py
 ├── pipeline_05_filter_tsv.py
-├── utils.py
+├── pipeline_06_data_analysis.py
+├── pipeline_07_vonHeijne_n_fold.py
+├── pipeline_08_vonHeijne_benchmark.py
+├── pipeline_09_svm_feature_collection.py
+├── pipeline_10_feature_selection.py
+├── pipeline_11_svm_hp_tuning.py
+├── pipeline_12_svm_benchmark.py
+├── pipeline_13_svm_error_analysis.py
+├── project_tree.txt
 ├── requirements.txt
-├── .gitignore
-└── README.md
+└── utils.py
+
+56 directories, 126 files
 ```
 
-- **config.py**: Contains configuration variables for the pipeline, such as queries, URLs, batch size, and directory paths.
-- **data_classes.py**: Defines data structures for storing protein data.
-- **main.py**: The main script that orchestrates the execution of the pipeline.
-- **pipeline_01_data_fetcher.py**: Functions to fetch data from the UniProt REST API.
-- **pipeline_01_data_filterer.py**: Filters the fetched data based on specified criteria.
-- **pipeline_02_data_clusterer.py**: Runs MMseqs2 to cluster the protein sequences.
-- **pipeline_03_data_splitting.py**: Splits the clustered data into training and testing sets.
-- **pipeline_04_cross_validation.py**: Splits the training data further into folds for cross-validation.
-- **pipeline_05_filter_tsv.py**: Filters the `.tsv` metadata files to include only sequences present in the `.fasta` files.
-- **utils.py**: Utility functions for logging and running shell commands.
-- **requirements.txt**: List of required Python packages.
-- **.gitignore**: Specifies files and directories to be ignored by Git.
-- **README.md**: This file.
+## Installation
 
-**Note:** The `data/` directory is not included in the repository and will be created when you run the pipeline.
+### Prerequisites
+
+- **Docker:** Recommended for ease of installation and reproducibility. Download from [Docker Official Website](https://www.docker.com/get-started).
+- **Python 3.8+** (if opting for manual installation)
+
+### Using Docker (Recommended)
+
+1. **Clone the Repository:**
+
+    ```bash
+    git clone https://github.com/heispv/protein-ml.git
+    cd protein-ml
+    ```
+
+2. **Build the Docker Image:**
+
+    ```bash
+    docker build -t protein-ml .
+    ```
+
+3. **Run the Docker Container:**
+
+    ```bash
+    docker run -it --rm -v $(pwd)/data:/app/data protein-ml
+    ```
+
+    *This command mounts the `data` directory from your local machine to the Docker container for data persistence.*
+
+### Manual Installation
+
+1. **Clone the Repository:**
+
+    ```bash
+    git clone https://github.com/heispv/protein-ml.git
+    cd protein-ml
+    ```
+
+2. **Create a Virtual Environment:**
+
+    ```bash
+    python3 -m venv venv
+    source venv/bin/activate
+    ```
+
+3. **Install Dependencies:**
+
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+4. **Ensure MMseqs2 is Installed:**
+
+    The pipeline utilizes MMseqs2 for clustering. Install it following the [MMseqs2 Installation Guide](https://github.com/soedinglab/MMseqs2/wiki/Installation).
 
 ## Configuration
 
-All configuration variables are stored in `config.py`. Before running the pipeline, you may need to adjust the configuration to suit your needs.
+All configuration parameters are defined in the `config.py` file. Key configurations include:
 
-Key configuration variables include:
+- **Data Directories:** Paths for fetched data, clustering results, splits, features, and results.
+- **Queries:** Positive and negative queries for data fetching based on UniProtKB/SwissProt annotations.
+- **Clustering Parameters:** MMseqs2 settings like identity and coverage thresholds.
+- **Random Seed:** Ensures reproducibility across runs.
 
-- **DATA_DIR**: Base directory for data storage.
-- **FETCHED_DIR**: Directory for fetched data.
-- **CLUSTER_DIR**: Directory for clustered data.
-- **SPLIT_DIR**: Directory for split data.
-- **LOG_FILE**: Path to the log file.
-- **BASE_URL**: Base URL for the UniProt REST API.
-- **POSITIVE_QUERY**: Query string for fetching positive protein data.
-- **NEGATIVE_QUERY**: Query string for fetching negative protein data.
-- **BATCH_SIZE**: Number of records to fetch per API request.
-- **MMSEQS_IDENTITY**: Minimum sequence identity for MMseqs2 clustering.
-- **MMSEQS_COVERAGE**: Minimum sequence coverage for MMseqs2 clustering.
-- **MMSEQS_FILE_PREFIX**: Prefix for MMseqs2 output files.
-- **NUM_FOLDS**: Number of folds for cross-validation.
+*Example `config.py`:*
 
-Ensure that the directory paths are correct and accessible.
+```python
+import os
+
+# Base directory for data
+DATA_DIR = os.path.join(os.getcwd(), 'data')
+
+# Subdirectories
+FETCHED_DIR = os.path.join(DATA_DIR, 'fetched_data')
+CLUSTER_DIR = os.path.join(DATA_DIR, 'clustering_results')
+SPLIT_DIR = os.path.join(DATA_DIR, 'splits')
+FEATURES_DIR = os.path.join(DATA_DIR, 'features')
+RESULTS_DIR = os.path.join(DATA_DIR, 'results')
+
+# Logging
+LOG_FILE = os.path.join(DATA_DIR, 'pipeline.log')
+
+# Queries
+POSITIVE_QUERY = "taxonomy:Eukaryota AND reviewed:yes AND length:[40 TO *] AND existence:experimental AND signal:yes"
+NEGATIVE_QUERY = "taxonomy:Eukaryota AND reviewed:yes AND length:[40 TO *] AND existence:experimental AND (location:Cytosol OR location:Nucleus OR location:Mitochondrion OR location:Plastid OR location:Peroxisome OR location:Cell_Membrane) AND signal:no"
+
+# Clustering parameters
+MMSEQS_IDENTITY = 0.30
+MMSEQS_COVERAGE = 0.40
+MMSEQS_FILE_PREFIX = 'cluster'
+
+# Other parameters
+BATCH_SIZE = 1000
+NUM_FOLDS = 5
+RANDOM_SEED = 42
+```
+
+*Modify `config.py` as per your requirements before running the pipeline.*
 
 ## Usage
 
-To run the pipeline, execute the `main.py` script:
+The pipeline is orchestrated through the `main.py` script, which sequentially executes all pipeline stages. Ensure all configurations are set correctly in `config.py` before initiating the pipeline.
+
+### Running the Pipeline
 
 ```bash
 python main.py
 ```
 
-The script will perform the following steps:
+*Alternatively, if using Docker, ensure the Docker container is running and execute the script within the container.*
 
-1. **Data Fetching**: Fetch protein data from the UniProt REST API.
-2. **Data Filtering**: Filter the fetched data based on specified criteria.
-3. **Data Clustering**: Cluster the protein sequences using MMseqs2.
-4. **Data Splitting**: Split the clustered data into training and testing sets.
-5. **Cross-Validation Splitting**: Perform cross-validation splitting on the training data.
-6. **Filtering Metadata Files**: Filter the `.tsv` metadata files to include only sequences present in the `.fasta` files.
+## Pipeline Overview
 
-**Note:** The `data/` directory and its subdirectories will be created automatically when you run the script.
+The pipeline consists of the following sequential steps:
 
-## Pipeline Steps
+1. **Data Fetching (`pipeline_01_data_fetcher.py`):**
+    - Retrieves protein data from UniProtKB/SwissProt based on predefined positive and negative queries.
+    - Handles pagination and batch fetching to manage large datasets.
 
-### 1. Data Fetching
+2. **Data Filtering (`pipeline_02_data_filterer.py`):**
+    - Applies inclusion criteria to curate a high-quality dataset of experimentally validated SPs and non-SPs.
+    - Ensures sequences are non-fragmented and meet length requirements.
 
-The pipeline fetches protein data from the UniProt REST API based on the queries defined in `config.py`. It uses batch requests to efficiently retrieve large datasets.
+3. **Clustering (`pipeline_03_data_clusterer.py`):**
+    - Utilizes MMseqs2 to cluster protein sequences, reducing redundancy and computational load by enforcing a minimum sequence identity of 30% and coverage of 40%.
 
-- **Positive Dataset**: Proteins that meet the criteria defined in `POSITIVE_QUERY`.
-- **Negative Dataset**: Proteins that meet the criteria defined in `NEGATIVE_QUERY`.
+4. **Data Splitting (`pipeline_04_data_splitting.py` & `pipeline_05_cross_validation_split.py`):**
+    - Splits the clustered data into training (80%) and benchmarking (20%) sets.
+    - Employs stratified sampling to maintain class balance across splits.
+    - Further divides the training set into cross-validation folds.
 
-Data is saved in `data/fetched_data/` as `.tsv` and `.fasta` files.
+5. **Feature Extraction (`pipeline_06_feature_extraction.py`):**
+    - Extracts biochemical and structural features from protein sequences, including amino acid composition, hydrophobicity, charge, alpha-helix propensity, and transmembrane propensity.
 
-### 2. Data Filtering
+6. **Feature Selection (`pipeline_07_feature_selection.py`):**
+    - Uses a Random Forest-based approach to assess feature importance.
+    - Selects the top 20 most informative features for model training.
 
-The fetched data is filtered to include only relevant proteins:
+7. **Von Heijne’s Method Implementation (`pipeline_08_vonHeijne.py`):**
+    - Implements the Position-Specific Weight Matrix (PSWM) approach to predict SP cleavage sites.
+    - Optimizes threshold values through 5-fold cross-validation.
 
-- **Positive Proteins**: Proteins with signal peptides of at least 14 amino acids.
-- **Negative Proteins**: Proteins with transmembrane helices.
+8. **Support Vector Machine Training (`pipeline_09_svm_training.py`):**
+    - Trains an SVM classifier using the extracted and selected features.
+    - Employs an RBF kernel with hyperparameters `C` and `γ` optimized via grid search and cross-validation.
 
-Filtered data is saved in the same directory.
+9. **Evaluation & Benchmarking (`pipeline_10_evaluation.py`):**
+    - Evaluates both von Heijne’s method and the SVM classifier using metrics such as MCC, Precision, Recall, and F1-score.
+    - Compares performance to determine the superior approach.
 
-### 3. Data Clustering
+10. **Error Analysis (`pipeline_11_error_analysis.py`):**
+    - Analyzes misclassifications, particularly false positives arising from transmembrane helices and false negatives from atypical SPs.
+    - Generates visualizations to identify patterns and areas for improvement.
 
-The filtered sequences are clustered using MMseqs2 to reduce redundancy:
+## Data Processing
 
-- Clusters sequences with at least `MMSEQS_IDENTITY` identity and `MMSEQS_COVERAGE` coverage.
-- Outputs representative sequences.
+The pipeline processes protein data through several stages to ensure a high-quality dataset suitable for accurate SP prediction:
 
-Clustered data is saved in `data/clustered_data/positive/` and `data/clustered_data/negative/`.
+- **Fetching:** Retrieves protein sequences and associated metadata from UniProtKB/SwissProt based on specific queries.
+- **Filtering:** Applies stringent inclusion criteria to curate experimentally validated SPs and non-SPs.
+- **Clustering:** Reduces redundancy using MMseqs2, ensuring diverse and non-redundant sequences.
+- **Splitting:** Divides data into training and benchmarking sets with stratified sampling to maintain class balance.
 
-### 4. Data Splitting
+## Feature Extraction and Selection
 
-The clustered sequences are split into training and testing sets:
+Features are crucial for training the SVM classifier. The pipeline extracts various biochemical and structural properties, including:
 
-- **Training Set**: 80% of the data.
-- **Testing Set**: 20% of the data.
+1. **Amino Acid Composition:** Frequencies of 20 residues in the first 20 positions of the sequence, calculated as the proportion of each residue in this region.
+2. **Hydrophobicity:** Maximal and average hydrophobicity values computed using the Kyte-Doolittle scale within a sliding window of size 5 over the first 40 residues.
+3. **Charge:** Maximal abundance of positively charged residues (K, R) and the normalized position of this maximum, calculated using a sliding window of size 3 over the first 40 residues.
+4. **Alpha-Helix Propensity:** Average and maximal alpha-helix propensities, computed using established scales in a sliding window of size 7 over the first 40 residues.
+5. **Transmembrane Propensity:** Average and maximal transmembrane tendencies, calculated using a sliding window of size 7 over the first 40 residues.
 
-Split data is saved in `data/splitted_data/train/` and `data/splitted_data/test/`.
+**Feature Selection:**
 
-### 5. Cross-Validation Splitting
+- Utilizes a Random Forest-based approach to assess feature importance.
+- Selects the top 20 most informative features based on their importance scores across cross-validation folds.
+- Ensures that only the most predictive features are retained for model training, enhancing efficiency and performance.
 
-The training data is further split into `NUM_FOLDS` folds for cross-validation:
+## Model Training and Evaluation
 
-- Each fold contains an equal portion of the training data.
-- The original `train/pos/` and `train/neg/` directories are deleted after splitting.
+### Von Heijne’s Method
 
-Cross-validation data is saved in `data/splitted_data/train/{1,2,3,4,5}/`.
+- **Approach:** Utilizes a Position-Specific Weight Matrix (PSWM) to analyze residue frequencies in a sliding window of 15 positions along the N-terminal region.
+- **Threshold Optimization:** Determines the optimal threshold for SP prediction through 5-fold cross-validation, averaging the best thresholds across all folds.
 
-### 6. Filtering Metadata Files
+### Support Vector Machines (SVMs)
 
-The `.tsv` metadata files are filtered to include only the sequences present in the `.fasta` files:
+- **Approach:** Maps sequences into a multidimensional feature space and finds an optimal hyperplane to separate SPs from non-SPs using an RBF kernel.
+- **Hyperparameter Tuning:** Optimizes the regularization parameter `C` and kernel coefficient `γ` via grid search and 5-fold cross-validation to maximize the Matthews Correlation Coefficient (MCC).
+- **Training:** Fits the SVM model on the training data using the selected features.
 
-- For each `.fasta` file in the test and cross-validation directories, a corresponding `.tsv` file is created.
-- Filters the original `.tsv` files based on the `primary_accession` field matching the sequence IDs in the `.fasta` files.
+### Evaluation Metrics
 
-Filtered `.tsv` files are saved in the same directories as the `.fasta` files.
+- **Matthews Correlation Coefficient (MCC):** Measures the quality of binary classifications, considering true and false positives and negatives.
+- **Precision:** The ratio of true positives to the sum of true and false positives.
+- **Recall:** The ratio of true positives to the sum of true positives and false negatives.
+- **F1-Score:** The harmonic mean of precision and recall.
+- **False Positive Rate (FPR):** Specifically assesses the rate of transmembrane helices misclassified as SPs.
 
-## Directory Structure
+## Benchmarking
 
-After running the pipeline, the `data/` directory will have the following structure:
+Benchmarking compares the performance of von Heijne’s method and the SVM classifier on a separate test dataset. The key findings include:
+
+- **SVMs outperform von Heijne’s method** across all metrics:
+  - **MCC:** 0.84 (SVM) vs. 0.68 (Von Heijne)
+  - **Precision:** 0.85 (SVM) vs. 0.66 (Von Heijne)
+  - **Recall:** 0.83 (SVM) vs. 0.77 (Von Heijne)
+  - **F1-Score:** 0.84 (SVM) vs. 0.71 (Von Heijne)
+- **False Positive Rates:**
+  - **Transmembrane Helices FPR:** 0.21 (SVM) vs. 0.26 (Von Heijne)
+
+These results demonstrate the superior accuracy and robustness of SVMs in distinguishing SPs from non-SPs, particularly in handling hydrophobic regions that mimic SP features.
+
+## Error Analysis
+
+Error analysis identified common misclassification pitfalls:
+
+- **False Positives:** Predominantly transmembrane helices misclassified as SPs due to similar hydrophobic characteristics.
+- **False Negatives:** SPs with atypical lengths or cleavage site compositions not captured effectively by the models.
+
+Additional insights include:
+
+- **Protein Length:** Longer proteins may have SPs located beyond the first 20 amino acids, leading to missed predictions when focusing solely on the N-terminal region.
+- **Amino Acid Composition:** High abundance of leucine (L) in non-SPs complicates accurate prediction, as its presence closely resembles background distributions.
+
+These findings highlight the need for refined models that account for sequence context and amino acid-specific patterns in greater detail.
+
+## Performance Metrics
+
+Performance of the models is evaluated using the following metrics:
+
+1. **Matthews Correlation Coefficient (MCC):**
+
+    \[
+    MCC = \frac{TP \times TN - FP \times FN}{\sqrt{(TP + FP)(TP + FN)(TN + FP)(TN + FN)}}
+    \]
+
+2. **Precision:**
+
+    \[
+    Precision = \frac{TP}{TP + FP}
+    \]
+
+3. **Recall:**
+
+    \[
+    Recall = \frac{TP}{TP + FN}
+    \]
+
+4. **F1-Score:**
+
+    \[
+    F1\text{-}score = 2 \times \frac{Precision \times Recall}{Precision + Recall}
+    \]
+
+5. **False Positive Rate (FPR):**
+
+    \[
+    FPR = \frac{FP}{FP + TN}
+    \]
+
+These metrics provide a comprehensive assessment of model performance, balancing the trade-offs between sensitivity and specificity.
+
+## Results
+
+### Cross-Validation Results
+
+| Method              | MCC  | Precision | Recall | F1-Score |
+|---------------------|------|-----------|--------|----------|
+| Von Heijne          | 0.68 | 0.66      | 0.77   | 0.71     |
+| Support Vector M.   | 0.84 | 0.85      | 0.83   | 0.84     |
+
+### Benchmarking Performance
+
+| Method              | MCC  | Precision | Recall | F1-Score | FPR | TM Helix FPR |
+|---------------------|------|-----------|--------|----------|-----|--------------|
+| Von Heijne          | 0.65 | 0.64      | 0.76   | 0.69     | 0.05| 0.26         |
+| Support Vector M.   | 0.82 | 0.75      | 0.94   | 0.84     | 0.04| 0.21         |
+
+**Key Observations:**
+
+- **SVMs significantly outperform** von Heijne’s method across all metrics.
+- **Lower FPR for transmembrane helices** indicates better discrimination between SPs and transmembrane regions.
+- **Protein length and amino acid composition** are critical factors influencing prediction accuracy.
+
+## Future Directions
+
+To further enhance SP prediction accuracy and address existing limitations, the following approaches are proposed:
+
+1. **Advanced Sequence Representations:**
+    - Replace one-hot encoding with embeddings derived from pre-trained models like ProtT5 or ESM to capture contextual and evolutionary information across entire protein sequences.
+
+2. **Transformer-Based Models:**
+    - Implement transformer architectures to leverage global sequence context and attention mechanisms, enabling the model to focus on critical regions regardless of their position within the sequence.
+
+3. **Extended Feature Sets:**
+    - Incorporate additional features such as evolutionary profiles, structural predictions, and post-translational modifications to enrich the feature space.
+
+4. **Handling Longer Proteins:**
+    - Develop models capable of processing full-length sequences to accurately predict SPs located beyond the initial N-terminal region.
+
+5. **Resource Optimization:**
+    - Optimize computational resources to facilitate the training and deployment of complex models in resource-limited environments.
+
+These advancements hold the potential to overcome current challenges, providing more accurate and reliable SP predictions.
+
+## Dependencies
+
+All Python dependencies are listed in the `requirements.txt` file:
 
 ```
-data/
-├── fetched_data/
-│   ├── pos_filtered_proteins.tsv
-│   ├── pos_filtered_proteins.fasta
-│   ├── neg_filtered_proteins.tsv
-│   └── neg_filtered_proteins.fasta
-├── clustered_data/
-│   ├── positive/
-│   │   └── cluster_results_i30_c40_pos_rep_seq.fasta
-│   └── negative/
-│       └── cluster_results_i30_c40_neg_rep_seq.fasta
-├── splitted_data/
-│   ├── train/
-│   │   ├── 1/
-│   │   │   ├── pos/
-│   │   │   │   ├── pos_fold_1.fasta
-│   │   │   │   └── pos_fold_1.tsv
-│   │   │   └── neg/
-│   │   │       ├── neg_fold_1.fasta
-│   │   │       └── neg_fold_1.tsv
-│   │   ├── 2/
-│   │   │   └── ...
-│   │   ├── 3/
-│   │   ├── 4/
-│   │   └── 5/
-│   └── test/
-│       ├── pos/
-│       │   ├── pos_test.fasta
-│       │   └── pos_test.tsv
-│       └── neg/
-│           ├── neg_test.fasta
-│           └── neg_test.tsv
-└── pipeline_execution.log
+requests
+pandas
+numpy
+matplotlib
+seaborn
+biopython
+scikit-learn
+joblib
+mmseqs2
 ```
 
-**Note:** This directory structure will be created when you run the pipeline. Since the `data/` directory is in the `.gitignore` file, it is not included in the repository.
+*Install dependencies using:*
 
-## Logging
+```bash
+pip install -r requirements.txt
+```
 
-The pipeline's execution is logged to `data/pipeline_execution.log`. This log file contains detailed information about each step, including:
-
-- Start and completion times.
-- Number of records processed.
-- Any errors or warnings encountered.
-
-## Customization
-
-You can customize the pipeline by modifying the configuration variables in `config.py`:
-
-- **Queries**: Adjust `POSITIVE_QUERY` and `NEGATIVE_QUERY` to change the criteria for fetching proteins.
-- **Batch Size**: Modify `BATCH_SIZE` to control the number of records fetched per API request.
-- **Clustering Parameters**: Change `MMSEQS_IDENTITY` and `MMSEQS_COVERAGE` to adjust clustering sensitivity.
-- **Cross-Validation Folds**: Set `NUM_FOLDS` to change the number of folds in cross-validation.
-- **Data Directories**: Update `DATA_DIR`, `FETCHED_DIR`, `CLUSTER_DIR`, and `SPLIT_DIR` to change where data is stored.
-
-## Error Handling
-
-- Ensure that all required dependencies are installed and accessible.
-- The pipeline checks for the existence of files and directories before proceeding.
-- Errors and warnings are logged to `pipeline_execution.log`.
-- If a step fails, the pipeline logs the error and continues to the next step where appropriate.
-
-## Cleaning Up
-
-To rerun the pipeline from scratch:
-
-1. Delete the `data/` directory or its contents:
-
-   ```bash
-   rm -r data/
-   ```
-
-2. Ensure that the `pipeline_execution.log` file is also deleted if you want a fresh log.
-3. Rerun the `main.py` script:
-
-   ```bash
-   python main.py
-   ```
-
-Alternatively, you can modify the pipeline to overwrite existing files or to check for existing data before processing.
+**Note:** Ensure that external tools like MMseqs2 are installed and accessible in your system's PATH.
 
 ## Contributing
 
 Contributions are welcome! Please follow these steps:
 
-1. Fork the repository.
+1. **Fork the Repository**
 
-   ```bash
-   git clone https://github.com/yourusername/protein-ml.git
-   ```
+2. **Create a Feature Branch**
 
-2. Create a new branch:
+    ```bash
+    git checkout -b feature/YourFeature
+    ```
 
-   ```bash
-   git checkout -b feature/my-feature
-   ```
+3. **Commit Your Changes**
 
-3. Make your changes.
-4. Commit your changes:
+    ```bash
+    git commit -m "Add some feature"
+    ```
 
-   ```bash
-   git commit -am 'Add new feature'
-   ```
+4. **Push to the Branch**
 
-5. Push to the branch:
+    ```bash
+    git push origin feature/YourFeature
+    ```
 
-   ```bash
-   git push origin feature/my-feature
-   ```
+5. **Open a Pull Request**
 
-6. Create a new Pull Request on GitHub.
+Please ensure that your contributions adhere to the project’s coding standards and include appropriate tests and documentation.
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the [MIT License](LICENSE).
 
----
+## Contact
 
-If you have any questions or need further assistance, please feel free to contact the project maintainers.
-
-**Contact Information:**
+For any questions or suggestions, please contact:
 
 - **Name:** Peyman Vahidi
-- **Email:** [peyman.vahidi@studio.unibo.it](mailto:peyman.vahidi@studio.unibo.it)
+- **Email:** peymanvahidi1998@gmail.com
+- **GitHub:** [heispv](https://github.com/heispv)
 
 ---
 
-**Acknowledgments:**
+**Acknowledgments:** The author would like to express sincere gratitude to Professor Savojardo Castrense for their invaluable support and guidance throughout this research project.
 
-- This project was developed as part of a course assignment.
-- Special thanks to the course instructors and peers for their support.
+**Supplementary Information:** All supplementary materials, including datasets, code, and additional figures, are available in our GitHub repository.
