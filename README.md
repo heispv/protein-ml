@@ -625,5 +625,3 @@ For any questions or suggestions, please contact:
 ---
 
 **Acknowledgments:** The author would like to express sincere gratitude to Professor Savojardo Castrense for their invaluable support and guidance throughout this research project.
-
-**Supplementary Information:** All supplementary materials, including datasets, code, and additional figures, are available in our GitHub repository.
