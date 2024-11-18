@@ -1,5 +1,10 @@
 experiment/
-data/
+data/cleavage_site_seqs
+data/clustered_data
+data/features
+data/fetched_data
+data/splited_data
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -59,7 +64,6 @@ cover/
 *.pot
 
 # Django stuff:
-*.log
 local_settings.py
 db.sqlite3
 db.sqlite3-journal

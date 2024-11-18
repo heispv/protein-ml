@@ -1,0 +1,110 @@
+2024-11-18 18:43:38,735 - INFO - Logging initialized. Data will be saved in data/
+2024-11-18 18:43:38,735 - INFO - Script started at 2024-11-18 18:43:38.735668
+2024-11-18 18:43:38,735 - INFO - Positive query: ((taxonomy_id:2759) AND (reviewed:true) AND (length:[40 TO *]) AND (ft_signal_exp:*) AND (fragment:false))
+2024-11-18 18:43:38,736 - INFO - Negative query: ((existence:1) AND (taxonomy_id:2759) AND (length:[40 TO *]) AND (reviewed:true) AND (fragment:false) AND ((cc_scl_term_exp:SL-0091) OR (cc_scl_term_exp:SL-0191) OR (cc_scl_term_exp:SL-0173) OR (cc_scl_term_exp:SL-0209) OR (cc_scl_term_exp:SL-0204) OR (cc_scl_term_exp:SL-0039)) NOT (ft_signal:*))
+2024-11-18 18:43:38,736 - INFO - Batch size: 500
+2024-11-18 18:43:38,736 - INFO - Starting protein data processing
+2024-11-18 18:43:38,736 - INFO - Created requests Session with retry configuration
+2024-11-18 18:43:38,738 - INFO - Positive dataset files already exist: data/fetched_data/pos_filtered_proteins.tsv and data/fetched_data/pos_filtered_proteins.fasta.
+2024-11-18 18:43:38,738 - INFO - Skipping download...
+2024-11-18 18:43:38,740 - INFO - Negative dataset files already exist: data/fetched_data/neg_filtered_proteins.tsv and data/fetched_data/neg_filtered_proteins.fasta.
+2024-11-18 18:43:38,741 - INFO - Skipping download...
+2024-11-18 18:43:38,742 - INFO - Clustering output for pos data already exists at data/clustered_data/positive/cluster_results_i30_c40_pos_rep_seq.fasta.
+2024-11-18 18:43:38,743 - INFO - Skipping clustering step...
+2024-11-18 18:43:38,745 - INFO - Clustering output for neg data already exists at data/clustered_data/negative/cluster_results_i30_c40_neg_rep_seq.fasta.
+2024-11-18 18:43:38,745 - INFO - Skipping clustering step...
+2024-11-18 18:43:38,912 - INFO - Read 1085 sequences from data/clustered_data/positive/cluster_results_i30_c40_pos_rep_seq.fasta
+2024-11-18 18:43:38,913 - INFO - Shuffled sequences
+2024-11-18 18:43:38,913 - INFO - Split sequences into 868 training and 217 testing sequences
+2024-11-18 18:43:38,927 - INFO - Saved training sequences to data/splited_data/train/pos/cluster_results_i30_c40_pos_rep_seq_train.fasta
+2024-11-18 18:43:38,933 - INFO - Saved testing sequences to data/splited_data/test/pos/cluster_results_i30_c40_pos_rep_seq_test.fasta
+2024-11-18 18:43:38,934 - INFO - Data splitting for pos completed.
+2024-11-18 18:43:39,215 - INFO - Read 8793 sequences from data/clustered_data/negative/cluster_results_i30_c40_neg_rep_seq.fasta
+2024-11-18 18:43:39,218 - INFO - Shuffled sequences
+2024-11-18 18:43:39,218 - INFO - Split sequences into 7034 training and 1759 testing sequences
+2024-11-18 18:43:39,338 - INFO - Saved training sequences to data/splited_data/train/neg/cluster_results_i30_c40_neg_rep_seq_train.fasta
+2024-11-18 18:43:39,371 - INFO - Saved testing sequences to data/splited_data/test/neg/cluster_results_i30_c40_neg_rep_seq_test.fasta
+2024-11-18 18:43:39,379 - INFO - Data splitting for neg completed.
+2024-11-18 18:43:39,402 - INFO - Cross-validation split files already exist in data/splited_data/train.
+2024-11-18 18:43:39,403 - INFO - Skipping cross-validation splitting step...
+2024-11-18 18:43:39,416 - INFO - Processing fasta file data/splited_data/test/neg/cluster_results_i30_c40_neg_rep_seq_test.fasta
+2024-11-18 18:43:39,420 - INFO - Filtered TSV file data/splited_data/test/neg/cluster_results_i30_c40_neg_rep_seq_test.tsv already exists. Skipping filtering for this FASTA file.
+2024-11-18 18:43:39,426 - INFO - Processing fasta file data/splited_data/test/pos/cluster_results_i30_c40_pos_rep_seq_test.fasta
+2024-11-18 18:43:39,430 - INFO - Filtered TSV file data/splited_data/test/pos/cluster_results_i30_c40_pos_rep_seq_test.tsv already exists. Skipping filtering for this FASTA file.
+2024-11-18 18:43:39,454 - INFO - Processing fasta file data/splited_data/train/1/neg/neg_fold_1.fasta
+2024-11-18 18:43:39,457 - INFO - Filtered TSV file data/splited_data/train/1/neg/neg_fold_1.tsv already exists. Skipping filtering for this FASTA file.
+2024-11-18 18:43:39,461 - INFO - Processing fasta file data/splited_data/train/1/pos/pos_fold_1.fasta
+2024-11-18 18:43:39,464 - INFO - Filtered TSV file data/splited_data/train/1/pos/pos_fold_1.tsv already exists. Skipping filtering for this FASTA file.
+2024-11-18 18:43:39,473 - INFO - Processing fasta file data/splited_data/train/2/neg/neg_fold_2.fasta
+2024-11-18 18:43:39,475 - INFO - Filtered TSV file data/splited_data/train/2/neg/neg_fold_2.tsv already exists. Skipping filtering for this FASTA file.
+2024-11-18 18:43:39,478 - INFO - Processing fasta file data/splited_data/train/2/pos/pos_fold_2.fasta
+2024-11-18 18:43:39,480 - INFO - Filtered TSV file data/splited_data/train/2/pos/pos_fold_2.tsv already exists. Skipping filtering for this FASTA file.
+2024-11-18 18:43:39,489 - INFO - Processing fasta file data/splited_data/train/3/neg/neg_fold_3.fasta
+2024-11-18 18:43:39,491 - INFO - Filtered TSV file data/splited_data/train/3/neg/neg_fold_3.tsv already exists. Skipping filtering for this FASTA file.
+2024-11-18 18:43:39,494 - INFO - Processing fasta file data/splited_data/train/3/pos/pos_fold_3.fasta
+2024-11-18 18:43:39,497 - INFO - Filtered TSV file data/splited_data/train/3/pos/pos_fold_3.tsv already exists. Skipping filtering for this FASTA file.
+2024-11-18 18:43:39,506 - INFO - Processing fasta file data/splited_data/train/4/neg/neg_fold_4.fasta
+2024-11-18 18:43:39,508 - INFO - Filtered TSV file data/splited_data/train/4/neg/neg_fold_4.tsv already exists. Skipping filtering for this FASTA file.
+2024-11-18 18:43:39,511 - INFO - Processing fasta file data/splited_data/train/4/pos/pos_fold_4.fasta
+2024-11-18 18:43:39,513 - INFO - Filtered TSV file data/splited_data/train/4/pos/pos_fold_4.tsv already exists. Skipping filtering for this FASTA file.
+2024-11-18 18:43:39,522 - INFO - Processing fasta file data/splited_data/train/5/neg/neg_fold_5.fasta
+2024-11-18 18:43:39,524 - INFO - Filtered TSV file data/splited_data/train/5/neg/neg_fold_5.tsv already exists. Skipping filtering for this FASTA file.
+2024-11-18 18:43:39,527 - INFO - Processing fasta file data/splited_data/train/5/pos/pos_fold_5.fasta
+2024-11-18 18:43:39,529 - INFO - Filtered TSV file data/splited_data/train/5/pos/pos_fold_5.tsv already exists. Skipping filtering for this FASTA file.
+2024-11-18 18:43:39,532 - INFO - Processing fasta file data/splited_data/train/neg/cluster_results_i30_c40_neg_rep_seq_train.fasta
+2024-11-18 18:43:39,534 - INFO - Filtered TSV file data/splited_data/train/neg/cluster_results_i30_c40_neg_rep_seq_train.tsv already exists. Skipping filtering for this FASTA file.
+2024-11-18 18:43:39,537 - INFO - Processing fasta file data/splited_data/train/pos/cluster_results_i30_c40_pos_rep_seq_train.fasta
+2024-11-18 18:43:39,539 - INFO - Filtered TSV file data/splited_data/train/pos/cluster_results_i30_c40_pos_rep_seq_train.tsv already exists. Skipping filtering for this FASTA file.
+2024-11-18 18:43:39,539 - INFO - Starting protein length distribution analysis.
+2024-11-18 18:43:39,542 - INFO - All protein length distribution plots already exist. Skipping analysis.
+2024-11-18 18:43:39,542 - INFO - Starting signal peptide length distribution analysis.
+2024-11-18 18:43:39,545 - INFO - All signal peptide length distribution plots already exist. Skipping analysis.
+2024-11-18 18:43:39,545 - INFO - Starting comparative amino acid composition analysis.
+2024-11-18 18:43:39,549 - INFO - All amino acid composition comparison plots already exist. Skipping analysis.
+2024-11-18 18:43:39,549 - INFO - Starting taxonomic classification analysis.
+2024-11-18 18:43:39,554 - INFO - All taxonomic classification pie charts already exist. Skipping analysis.
+2024-11-18 18:43:39,554 - INFO - Starting scientific name classification analysis.
+2024-11-18 18:43:39,558 - INFO - All scientific name classification pie charts already exist. Skipping analysis.
+2024-11-18 18:43:39,558 - INFO - Starting cleavage site sequence extraction.
+2024-11-18 18:43:39,652 - INFO - All cleavage site sequence FASTA files already exist. Skipping extraction.
+2024-11-18 18:43:39,653 - INFO - Starting Von Heijne analysis.
+2024-11-18 18:43:39,656 - INFO - Von Heijne analysis output files already exist. Skipping computation.
+2024-11-18 18:43:39,657 - INFO - Starting Von Heijne benchmark analysis.
+2024-11-18 18:43:39,658 - INFO - Training phase started.
+2024-11-18 18:43:39,674 - INFO - Training phase completed.
+2024-11-18 18:43:39,702 - INFO - Scoring matrix saved to data/vonHeijne_results_benchmark/scoring_matrix.csv
+2024-11-18 18:43:39,702 - INFO - Reading threshold from file.
+2024-11-18 18:43:39,707 - INFO - Threshold read from file: 6.156303657644751
+2024-11-18 18:43:39,708 - INFO - Testing phase started.
+2024-11-18 18:43:39,805 - WARNING - Unknown amino acid 'X' at position 8 in sequence. Skipping window.
+2024-11-18 18:43:39,806 - WARNING - Unknown amino acid 'X' at position 8 in sequence. Skipping window.
+2024-11-18 18:43:39,807 - WARNING - Unknown amino acid 'X' at position 8 in sequence. Skipping window.
+2024-11-18 18:43:39,807 - WARNING - Unknown amino acid 'X' at position 8 in sequence. Skipping window.
+2024-11-18 18:43:39,808 - WARNING - Unknown amino acid 'X' at position 8 in sequence. Skipping window.
+2024-11-18 18:43:39,808 - WARNING - Unknown amino acid 'X' at position 8 in sequence. Skipping window.
+2024-11-18 18:43:39,809 - WARNING - Unknown amino acid 'X' at position 8 in sequence. Skipping window.
+2024-11-18 18:43:39,809 - WARNING - Unknown amino acid 'X' at position 8 in sequence. Skipping window.
+2024-11-18 18:43:39,810 - WARNING - Unknown amino acid 'X' at position 8 in sequence. Skipping window.
+2024-11-18 18:43:40,379 - INFO - Testing phase completed. Threshold: 6.156303657644751, Precision: 0.6356589147286822, Recall: 0.7557603686635944, F1: 0.6905263157894737, MCC: 0.6517438704637234
+2024-11-18 18:43:40,380 - INFO - Identifying False Positives (FP) and True Negatives (TN).
+2024-11-18 18:43:40,386 - INFO - False Positive IDs saved to data/vonHeijne_results_benchmark/von_heijne_fp_id.csv
+2024-11-18 18:43:40,395 - INFO - True Negative IDs saved to data/vonHeijne_results_benchmark/von_heijne_tn_id.csv
+2024-11-18 18:43:40,395 - INFO - Calculating FPR and Transmembrane FPR.
+2024-11-18 18:43:40,619 - INFO - Loaded negative test TSV data from data/splited_data/test/neg/cluster_results_i30_c40_neg_rep_seq_test.tsv
+2024-11-18 18:43:40,620 - INFO - Overall False Positive Rate (FPR): 0.0534
+2024-11-18 18:43:40,726 - INFO - False Positive Rate for Transmembrane Proteins (FPR_TM): 0.2558
+2024-11-18 18:43:40,726 - INFO - False Positive Rate for Non-Transmembrane Proteins (FPR_Non_TM): 0.0484
+2024-11-18 18:43:40,730 - INFO - Benchmark results saved to data/vonHeijne_results_benchmark/benchmark_results.csv
+2024-11-18 18:43:40,743 - INFO - Detailed results saved to data/vonHeijne_results_benchmark/detailed_results.csv
+2024-11-18 18:43:40,744 - INFO - Von Heijne benchmark analysis completed.
+2024-11-18 18:43:40,745 - INFO - Starting feature extraction pipeline.
+2024-11-18 18:43:40,752 - INFO - All feature extraction output files already exist. Skipping feature extraction.
+2024-11-18 18:43:40,753 - INFO - Starting feature selection pipeline.
+2024-11-18 18:43:40,762 - INFO - All feature selection output files already exist. Skipping feature selection.
+2024-11-18 18:43:40,762 - INFO - Starting SVM hyperparameter tuning pipeline.
+2024-11-18 18:43:40,768 - INFO - All hyperparameter tuning output files already exist. Skipping hyperparameter tuning.
+2024-11-18 18:43:40,769 - INFO - Starting SVM benchmarking pipeline.
+2024-11-18 18:43:40,786 - INFO - All benchmarking output files already exist. Skipping SVM benchmarking.
+2024-11-18 18:43:40,786 - INFO - Starting SVM error analysis.
+2024-11-18 18:43:40,805 - INFO - All error analysis output files already exist. Skipping SVM error analysis.
+2024-11-18 18:43:40,805 - INFO - Protein data processing completed
