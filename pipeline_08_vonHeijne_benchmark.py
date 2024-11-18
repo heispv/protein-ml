@@ -94,7 +94,7 @@ def read_threshold_from_file(threshold_file: str) -> Optional[float]:
         logging.error(f"Error reading threshold from file {threshold_file}: {e}")
     return None
 
-def read_sequences_from_dir(dir_path: str) -> List[str]:
+def read_sequences_from_dir(dir_path: str) -> List[Tuple[str, str]]:
     sequences = []
     if not os.path.isdir(dir_path):
         logging.warning(f"Directory {dir_path} does not exist. Skipping.")
@@ -108,7 +108,8 @@ def read_sequences_from_dir(dir_path: str) -> List[str]:
         try:
             for record in SeqIO.parse(fasta_path, 'fasta'):
                 seq = str(record.seq).upper().replace('U', 'C')
-                sequences.append(seq)
+                accession_id = record.id
+                sequences.append((accession_id, seq))
         except Exception as e:
             logging.error(f"Error reading fasta file {fasta_path}: {e}")
     return sequences
@@ -174,9 +175,12 @@ def perform_vonHeijne_benchmark_analysis(
     scoring_matrix_csv = os.path.join(output_dir, 'scoring_matrix.csv')
     results_csv = os.path.join(output_dir, 'benchmark_results.csv')
     detailed_results_csv = os.path.join(output_dir, 'detailed_results.csv')
+    fp_id_file = os.path.join(output_dir, 'von_heijne_fp_id.csv')
+    tn_id_file = os.path.join(output_dir, 'von_heijne_tn_id.csv')
 
     # Check if results already exist
-    if os.path.exists(scoring_matrix_csv) and os.path.exists(results_csv) and os.path.exists(detailed_results_csv):
+    existing_files = [scoring_matrix_csv, results_csv, detailed_results_csv, fp_id_file, tn_id_file]
+    if all(os.path.exists(f) for f in existing_files):
         logging.info("Benchmark analysis files already exist. Skipping computation.")
         print("Benchmark analysis files already exist. Skipping computation.")
         return
@@ -221,19 +225,30 @@ def perform_vonHeijne_benchmark_analysis(
     test_pos_dir = os.path.join(splitted_data_dir, 'pos')
     test_neg_dir = os.path.join(splitted_data_dir, 'neg')
 
-    # Read test sequences
-    test_pos_sequences = read_sequences_from_dir(test_pos_dir)
-    test_neg_sequences = read_sequences_from_dir(test_neg_dir)
+    # Read test sequences with accession_ids
+    test_pos_data = read_sequences_from_dir(test_pos_dir)
+    test_neg_data = read_sequences_from_dir(test_neg_dir)
 
-    if not test_pos_sequences and not test_neg_sequences:
+    if not test_pos_data and not test_neg_data:
         logging.error("No valid test sequences found.")
         return
 
-    # Compute scores
-    test_pos_scores = compute_sequence_scores(test_pos_sequences, scoring_matrix)
-    test_neg_scores = compute_sequence_scores(test_neg_sequences, scoring_matrix)
+    # Separate accession_ids and sequences
+    if test_pos_data:
+        test_pos_ids, test_pos_sequences = zip(*test_pos_data)
+    else:
+        test_pos_ids, test_pos_sequences = [], []
 
-    test_scores = test_pos_scores + test_neg_scores
+    if test_neg_data:
+        test_neg_ids, test_neg_sequences = zip(*test_neg_data)
+    else:
+        test_neg_ids, test_neg_sequences = [], []
+
+    # Compute scores
+    test_pos_scores = compute_sequence_scores(test_pos_sequences, scoring_matrix) if test_pos_sequences else []
+    test_neg_scores = compute_sequence_scores(test_neg_sequences, scoring_matrix) if test_neg_sequences else []
+
+    test_scores = list(test_pos_scores) + list(test_neg_scores)
     test_labels = [1] * len(test_pos_scores) + [0] * len(test_neg_scores)
     test_predictions = [1 if score >= threshold else 0 for score in test_scores]
 
@@ -244,20 +259,86 @@ def perform_vonHeijne_benchmark_analysis(
         f"Recall: {test_results['Recall']}, F1: {test_results['F1']}, MCC: {test_results['MCC']}"
     )
 
-    # Save results
+    # Identify FP and TN from Negative Test Data
+    logging.info("Identifying False Positives (FP) and True Negatives (TN).")
+
+    # Extract Negative Predictions
+    test_neg_predictions = test_predictions[len(test_pos_scores):] if test_neg_scores else []
+    test_neg_labels = test_labels[len(test_pos_scores):] if test_neg_scores else []
+
+    if test_neg_data and test_neg_predictions:
+        fp_ids = [acc_id for acc_id, pred in zip(test_neg_ids, test_neg_predictions) if pred == 1]
+        tn_ids = [acc_id for acc_id, pred in zip(test_neg_ids, test_neg_predictions) if pred == 0]
+
+        # Save FP IDs
+        fp_df = pd.DataFrame({'accession_id': fp_ids})
+        try:
+            fp_df.to_csv(fp_id_file, index=False)
+            logging.info(f"False Positive IDs saved to {fp_id_file}")
+        except Exception as e:
+            logging.error(f"Error saving False Positive IDs to {fp_id_file}: {e}")
+
+        # Save TN IDs
+        tn_df = pd.DataFrame({'accession_id': tn_ids})
+        try:
+            tn_df.to_csv(tn_id_file, index=False)
+            logging.info(f"True Negative IDs saved to {tn_id_file}")
+        except Exception as e:
+            logging.error(f"Error saving True Negative IDs to {tn_id_file}: {e}")
+    else:
+        logging.warning("No negative test data available to identify FP and TN.")
+
+    # Calculate FPR and Transmembrane FPR
+    logging.info("Calculating FPR and Transmembrane FPR.")
+
+    # Load corresponding .tsv file for negative test data
+    neg_tsv_file = os.path.join(splitted_data_dir, 'neg', 'cluster_results_i30_c40_neg_rep_seq_test.tsv')
+    if not os.path.exists(neg_tsv_file):
+        logging.error(f"Negative test TSV file not found: {neg_tsv_file}")
+        return
+
+    try:
+        neg_tsv_df = pd.read_csv(neg_tsv_file, sep='\t')
+        logging.info(f"Loaded negative test TSV data from {neg_tsv_file}")
+    except Exception as e:
+        logging.error(f"Error reading negative test TSV file {neg_tsv_file}: {e}")
+        return
+
+    # Overall FPR
+    total_fp = len(fp_ids)
+    total_tn = len(tn_ids)
+    overall_fpr = total_fp / (total_fp + total_tn) if (total_fp + total_tn) > 0 else 0
+    logging.info(f"Overall False Positive Rate (FPR): {overall_fpr:.4f}")
+
+    # FPR for Transmembrane Proteins
+    fp_tm = neg_tsv_df[neg_tsv_df['primary_accession'].isin(fp_ids)]['tm_helix'].sum()
+    tn_tm = neg_tsv_df[neg_tsv_df['primary_accession'].isin(tn_ids)]['tm_helix'].sum()
+    fpr_tm = fp_tm / (fp_tm + tn_tm) if (fp_tm + tn_tm) > 0 else 0
+    logging.info(f"False Positive Rate for Transmembrane Proteins (FPR_TM): {fpr_tm:.4f}")
+
+    # FPR for Non-Transmembrane Proteins
+    fp_non_tm = total_fp - fp_tm
+    tn_non_tm = total_tn - tn_tm
+    fpr_non_tm = fp_non_tm / (fp_non_tm + tn_non_tm) if (fp_non_tm + tn_non_tm) > 0 else 0
+    logging.info(f"False Positive Rate for Non-Transmembrane Proteins (FPR_Non_TM): {fpr_non_tm:.4f}")
+
+    # Save all metrics to benchmark_results.csv
     results_df = pd.DataFrame({
         'Threshold': [threshold],
         'Test Precision': [test_results['Precision']],
         'Test Recall': [test_results['Recall']],
         'Test F1': [test_results['F1']],
-        'Test MCC': [test_results['MCC']]
+        'Test MCC': [test_results['MCC']],
+        'Overall_FPR': [overall_fpr],
+        'FPR_Transmembrane_Proteins': [fpr_tm],
+        'FPR_Non_Transmembrane_Proteins': [fpr_non_tm]
     })
-    results_csv = os.path.join(output_dir, 'benchmark_results.csv')
+
     try:
         results_df.to_csv(results_csv, index=False)
-        logging.info(f"Results saved to {results_csv}")
+        logging.info(f"Benchmark results saved to {results_csv}")
     except Exception as e:
-        logging.error(f"Error saving results to CSV file {results_csv}: {e}")
+        logging.error(f"Error saving benchmark results to CSV file {results_csv}: {e}")
 
     # Save detailed results
     detailed_results_df = pd.DataFrame({
@@ -265,7 +346,6 @@ def perform_vonHeijne_benchmark_analysis(
         'Label': test_labels,
         'Prediction': test_predictions
     })
-    detailed_results_csv = os.path.join(output_dir, 'detailed_results.csv')
     try:
         detailed_results_df.to_csv(detailed_results_csv, index=False)
         logging.info(f"Detailed results saved to {detailed_results_csv}")
