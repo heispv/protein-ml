@@ -57,8 +57,6 @@ The pipeline is modular, consisting of multiple interconnected scripts, each han
 - **Model Training and Evaluation**
 - **Benchmarking and Error Analysis**
 
-![Pipeline Architecture](docs/pipeline_architecture.png)
-
 ## Project Structure
 
 The project directory is organized as follows:
@@ -246,8 +244,6 @@ The project directory is organized as follows:
 ├── project_tree.txt
 ├── requirements.txt
 └── utils.py
-
-56 directories, 126 files
 ```
 
 ## Installation
@@ -624,4 +620,4 @@ For any questions or suggestions, please contact:
 
 ---
 
-**Acknowledgments:** The author would like to express sincere gratitude to Professor Savojardo Castrense for their invaluable support and guidance throughout this research project.
+**Acknowledgments:** The author would like to express sincere gratitude to Professor Savojardo Castrense for their invaluable support and guidance throughout this course project.
